@@ -10,7 +10,7 @@ def parseCommandLine():
                         help='Enable verbose logging.')
     auth_group = parser.add_argument_group(
         title='authentication',
-        description='Authentication details are configured and can be copied from AppStore Connect->Users & Access->Keys.')
+        description='Authentication details are configured (and can be copied from) AppStore Connect->Users & Access->Keys.')
     auth_group.add_argument('--issuer-id', required=True,
                             help='Issuer ID.')
     auth_group.add_argument('--key-id', required=True,
