@@ -3,6 +3,7 @@ import time
 import requests
 import json
 import gzip
+import colorama
 
 APPSTORE_URI_ROOT = "https://api.appstoreconnect.apple.com/v1"
 APPSTORE_AUDIENCE = "appstoreconnect-v1"
@@ -34,7 +35,7 @@ def fetch(
         uri_root: str = APPSTORE_URI_ROOT,
         post_data=None, verbose:
         bool = False):
-    headers = {"Authorization": "Bearer {token}".format(token=access_token)}
+    headers = {"Authorization": f"Bearer {access_token}"}
     response = {}
 
     url = uri_root + path
@@ -68,6 +69,7 @@ def fetch(
         result = response
 
     if verbose:
-        print("appstore_api.fetchApi: ")
+        print(
+            f"{colorama.Fore.GREEN}appstore_api.fetchApi: {colorama.Fore.MAGENTA}{url}{colorama.Style.RESET_ALL}")
         print(result)
     return result
