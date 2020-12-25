@@ -5,9 +5,11 @@ name = "pypi"
 
 [packages]
 pyjwt = "*"
+cryptography = "*"
 
 [dev-packages]
 pylint = "*"
+autopep8 = "*"
 
 [requires]
 python_version = "3.9"
