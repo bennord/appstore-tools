@@ -11,7 +11,6 @@ key_group = parser.add_mutually_exclusive_group(required=True)
 key_group.add_argument('--key')
 key_group.add_argument('--key-file', type=argparse.FileType('r'))
 args = parser.parse_args()
-print(args)
 
 # AppStore JWT
 # https://developer.apple.com/documentation/appstoreconnectapi/generating_tokens_for_api_requests
