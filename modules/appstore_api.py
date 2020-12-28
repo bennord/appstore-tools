@@ -4,6 +4,7 @@ import requests
 import json
 import gzip
 import colorama
+from .print_util import print_json, print_color_reset
 
 APPSTORE_URI_ROOT = "https://api.appstoreconnect.apple.com/v1"
 APPSTORE_AUDIENCE = "appstoreconnect-v1"
@@ -69,7 +70,7 @@ def fetch(
         result = response
 
     if verbose:
-        print(
-            f"{colorama.Fore.GREEN}appstore_api.fetchApi: {colorama.Fore.MAGENTA}{url}{colorama.Style.RESET_ALL}")
-        print(result)
+        print_color_reset(
+            f"{colorama.Fore.GREEN}appstore_api.fetchApi: {colorama.Fore.MAGENTA}{url}")
+        print_json(result)
     return result

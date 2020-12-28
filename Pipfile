@@ -8,6 +8,7 @@ pyjwt = "*"
 cryptography = "*"
 requests = "*"
 colorama = "*"
+pygments = "*"
 
 [dev-packages]
 pylint = "*"

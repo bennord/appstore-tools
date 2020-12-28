@@ -2,6 +2,7 @@ import colorama
 import modules.argparse_util as argparse_util
 import modules.appstore_api as appstore
 import sys
+from modules.print_util import print_color_reset
 
 colorama.init()
 
@@ -13,7 +14,7 @@ verbose = args.verbose
 # Private Key created in the AppStore Connect Users/Keys
 private_key = (args.key if args.key != None else args.key_file.read())
 if verbose:
-    print(colorama.Fore.GREEN + "private_key:" + colorama.Style.RESET_ALL)
+    print_color_reset(colorama.Fore.GREEN + "private_key:")
     print(private_key)
 
 try:
@@ -23,7 +24,7 @@ except ValueError as error:
     sys.exit(error)
 
 if verbose:
-    print(colorama.Fore.GREEN + "access_token:" + colorama.Style.RESET_ALL)
+    print_color_reset(colorama.Fore.GREEN + "access_token:")
     print(access_token)
 
 # https://apps.apple.com/us/app/lionbridge-ai/id1534701695#?platform=iphone
