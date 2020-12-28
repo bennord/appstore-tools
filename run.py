@@ -29,7 +29,6 @@ if verbose:
 
 # https://apps.apple.com/us/app/lionbridge-ai/id1534701695#?platform=iphone
 app_id = 1534701695
-localization_id = "2d4ae30d-7227-4f25-99e8-fca502d1844"
 
 # appstore.fetch(
 #     path=f"/apps/{app_id}",
