@@ -33,13 +33,12 @@ def fetch(
         path: str,
         method: str,
         access_token: str,
-        uri_root: str = APPSTORE_URI_ROOT,
-        post_data=None, verbose:
-        bool = False):
+        post_data=None,
+        verbose:        bool = False):
     headers = {"Authorization": f"Bearer {access_token}"}
     response = {}
 
-    url = uri_root + path
+    url = (APPSTORE_URI_ROOT + path if path.startswith("/") else path)
 
     method = method.lower()
     if method == "get":
