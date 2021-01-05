@@ -22,9 +22,27 @@ app_id = args.app_id
 if app_id == None:
     app_id = appstore.get_app_id(bundle_id=args.bundle_id, access_token=access_token)
 
-logging.info(color_term(colorama.Fore.GREEN + "app_id:\n") + json_term(app_id))
+logging.info(color_term(colorama.Fore.GREEN + "app_id: ") + str(app_id))
 
-appstore.get_app_store_versions(app_id, access_token)
+live_id = appstore.get_app_live(app_id=app_id, access_token=access_token)["id"]
+logging.info(color_term(colorama.Fore.GREEN + "app_live_id: ") + str(live_id))
+
+localizations = appstore.get_localizations(
+    version_id=live_id, access_token=access_token
+)
+
+localization_ids = (l["id"] for l in localizations)
+for loc_id in localization_ids:
+    screenshot_sets = appstore.get_screenshot_sets(
+        localization_id=loc_id, access_token=access_token
+    )
+
+    screenshot_set_ids = (s["id"] for s in screenshot_sets)
+    for ss_set_id in screenshot_set_ids:
+        screenshot_sets = appstore.get_screenshots(
+            screenshot_set_id=ss_set_id, access_token=access_token
+        )
+
 
 # appstore.fetch(
 #     path=f"/apps/{app_id}?fields=bundleId",
@@ -40,27 +58,6 @@ appstore.get_app_store_versions(app_id, access_token)
 
 # appstore.fetch(
 #     path=f"/apps/{app_id}/appInfos?include=appInfoLocalizations",
-#     method="get",
-#     access_token=access_token,
-#     verbose=verbose)
-
-# appstoreversion_id = "f013a7f5-46e4-4fc4-a377-27de199dee7b"
-# localizations_result = appstore.fetch(
-#     path=f"/appStoreVersions/{appstoreversion_id}/appStoreVersionLocalizations",
-#     method="get",
-#     access_token=access_token,
-#     verbose=verbose)
-
-# appstoreversionlocalization_id = localizations_result["data"][0]["id"]
-# appstore.fetch(
-#     path=f"/appStoreVersionLocalizations/{appstoreversionlocalization_id}/appScreenshotSets",
-#     method="get",
-#     access_token=access_token,
-#     verbose=verbose)
-
-
-# appstore.fetch(
-#     path=f"/appScreenshotSets/{app_id}/appScreenshots",
 #     method="get",
 #     access_token=access_token,
 #     verbose=verbose)

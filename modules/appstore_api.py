@@ -85,7 +85,7 @@ def fetch(path: str, method: str, access_token: str, post_data=None):
 
     logging.debug(
         color_term(
-            f"{colorama.Fore.GREEN}appstore_api.fetchApi: {colorama.Fore.MAGENTA}{url}\n"
+            f"{colorama.Fore.GREEN}appstore_api.fetch: {colorama.Fore.MAGENTA}{url}\n"
         )
         + json_term(result)
     )
@@ -118,7 +118,7 @@ def get_app(
     ]
 
 
-def get_app_store_versions(
+def get_app_versions(
     app_id: str,
     access_token: str,
 ):
@@ -127,25 +127,58 @@ def get_app_store_versions(
     )["data"]
 
 
-def get_app_store_version(
+def get_app_version(
     app_id: str,
     app_store_state: AppStoreVersionState,
     access_token: str,
 ):
-    app_store_versions = get_app_store_versions(app_id, access_token)
+    app_store_versions = get_app_versions(app_id, access_token)
     return next(
         v
         for v in app_store_versions
-        if v["attributes"]["appStoreState"] == app_store_state
+        if v["attributes"]["appStoreState"] == app_store_state.name
     )
 
 
-def get_live_app_store_version(
+def get_app_live(
     app_id: str,
     access_token: str,
 ):
-    return get_app_store_version(
+    return get_app_version(
         app_id=app_id,
         app_store_state=AppStoreVersionState.READY_FOR_SALE,
         access_token=access_token,
     )
+
+
+def get_localizations(
+    version_id: str,
+    access_token: str,
+):
+    return fetch(
+        path=f"/appStoreVersions/{version_id}/appStoreVersionLocalizations",
+        method="get",
+        access_token=access_token,
+    )["data"]
+
+
+def get_screenshot_sets(
+    localization_id: str,
+    access_token: str,
+):
+    return fetch(
+        path=f"/appStoreVersionLocalizations/{localization_id}/appScreenshotSets",
+        method="get",
+        access_token=access_token,
+    )["data"]
+
+
+def get_screenshots(
+    screenshot_set_id: str,
+    access_token: str,
+):
+    return fetch(
+        path=f"/appScreenshotSets/{screenshot_set_id}/appScreenshots",
+        method="get",
+        access_token=access_token,
+    )["data"]
