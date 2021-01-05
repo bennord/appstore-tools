@@ -5,14 +5,15 @@ import json
 import colorama
 
 
-def print_json(obj: any):
+def json_term(obj: any):
+    """Stringifies the object with json syntax highlighting for the terminal."""
     obj_formatted = json.dumps(obj, indent=2)
-    obj_formatted_colored = pygments.highlight(
+    return pygments.highlight(
         code=obj_formatted,
         lexer=JsonLexer(),
         formatter=TerminalFormatter())
-    print(obj_formatted_colored)
 
 
-def print_color_reset(text: str):
-    print(text + colorama.Style.RESET_ALL)
+def color_term(text: str):
+    """Add the reset code for text using colorama color/style codes."""
+    return text + colorama.Style.RESET_ALL

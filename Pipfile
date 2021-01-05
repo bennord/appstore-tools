@@ -9,6 +9,7 @@ cryptography = "*"
 requests = "*"
 colorama = "*"
 pygments = "*"
+configargparse = "*"
 
 [dev-packages]
 pylint = "*"

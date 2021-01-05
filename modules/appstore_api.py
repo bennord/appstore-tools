@@ -4,14 +4,19 @@ import requests
 import json
 import gzip
 import colorama
-from .print_util import print_json, print_color_reset
+import logging
+from .print_util import json_term, color_term
 
 APPSTORE_URI_ROOT = "https://api.appstoreconnect.apple.com/v1"
 APPSTORE_AUDIENCE = "appstoreconnect-v1"
 APPSTORE_JWT_ALGO = "ES256"
 
 
-def create_access_token(issuer_id: str, key_id: str, key: str) -> str:
+def create_access_token(
+    issuer_id: str,
+    key_id: str,
+    key: str
+) -> str:
     """Create an access token for use in the AppStore Connect API."""
 
     # The token's expiration time, in Unix epoch time; tokens that expire more than
@@ -33,8 +38,8 @@ def fetch(
         path: str,
         method: str,
         access_token: str,
-        post_data=None,
-        verbose:        bool = False):
+        post_data=None
+):
     headers = {"Authorization": f"Bearer {access_token}"}
     response = {}
 
@@ -68,8 +73,40 @@ def fetch(
     else:
         result = response
 
-    if verbose:
-        print_color_reset(
-            f"{colorama.Fore.GREEN}appstore_api.fetchApi: {colorama.Fore.MAGENTA}{url}")
-        print_json(result)
+    logging.info(
+        color_term(f"{colorama.Fore.GREEN}appstore_api.fetchApi: {colorama.Fore.MAGENTA}{url}\n") +
+        json_term(result))
     return result
+
+
+def get_apps(
+    access_token: str,
+):
+    return fetch(
+        path=f"/apps",
+        method="get",
+        access_token=access_token)
+
+
+def get_app_id(
+    bundle_id: str,
+    access_token: str,
+) -> int:
+    apps = fetch(
+        path=f"/apps",
+        method="get",
+        access_token=access_token)["data"]
+
+    app_id = next(app["id"] for app in apps
+                  if app["attributes"]["bundleId"] == bundle_id)
+    return int(app_id)
+
+
+def get_app(
+    app_id: str,
+    access_token: str,
+):
+    return fetch(
+        path=f"/apps/{app_id}",
+        method="get",
+        access_token=access_token)["data"]
