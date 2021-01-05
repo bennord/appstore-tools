@@ -4,17 +4,17 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-pyjwt = "*"
+PyJWT = "*"
 cryptography = "*"
 requests = "*"
 colorama = "*"
-pygments = "*"
-configargparse = "*"
+Pygments = "*"
+ConfigArgParse = "*"
 
 [dev-packages]
 pylint = "*"
-autopep8 = "*"
 rope = "*"
+black = "*"
 
 [requires]
 python_version = "3.9"

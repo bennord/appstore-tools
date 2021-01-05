@@ -6,6 +6,7 @@ Tools for interacting with the AppStore Connect api
 
 - python (use pyenv to install `v3.9.*`)
 - pipenv (`sudo apt install pipenv`)
+- black (set this as the python formatter in whatever code editor you use)
 
 ### Install
 

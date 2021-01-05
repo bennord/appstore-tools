@@ -9,9 +9,8 @@ def json_term(obj: any):
     """Stringifies the object with json syntax highlighting for the terminal."""
     obj_formatted = json.dumps(obj, indent=2)
     return pygments.highlight(
-        code=obj_formatted,
-        lexer=JsonLexer(),
-        formatter=TerminalFormatter())
+        code=obj_formatted, lexer=JsonLexer(), formatter=TerminalFormatter()
+    )
 
 
 def color_term(text: str):

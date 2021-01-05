@@ -10,30 +10,21 @@ colorama.init()
 args = argparse_util.parse_command_line()
 
 private_key = args.key
-logging.debug(
-    color_term(colorama.Fore.GREEN + "private_key:\n") +
-    private_key)
 
 try:
     access_token = appstore.create_access_token(
-        issuer_id=args.issuer_id, key_id=args.key_id, key=private_key)
+        issuer_id=args.issuer_id, key_id=args.key_id, key=private_key
+    )
 except ValueError as error:
     sys.exit(error)
 
-logging.debug(
-    color_term(colorama.Fore.GREEN + "access_token:\n") +
-    access_token)
-
 app_id = args.app_id
 if app_id == None:
-    app_id = appstore.get_app_id(
-        bundle_id=args.bundle_id,
-        access_token=access_token)
+    app_id = appstore.get_app_id(bundle_id=args.bundle_id, access_token=access_token)
 
-logging.debug(
-    color_term(colorama.Fore.GREEN + "app_id:\n") +
-    json_term(app_id))
+logging.info(color_term(colorama.Fore.GREEN + "app_id:\n") + json_term(app_id))
 
+appstore.get_app_store_versions(app_id, access_token)
 
 # appstore.fetch(
 #     path=f"/apps/{app_id}?fields=bundleId",
@@ -49,12 +40,6 @@ logging.debug(
 
 # appstore.fetch(
 #     path=f"/apps/{app_id}/appInfos?include=appInfoLocalizations",
-#     method="get",
-#     access_token=access_token,
-#     verbose=verbose)
-
-# appstore.fetch(
-#     path=f"/apps/{app_id}/appStoreVersions",
 #     method="get",
 #     access_token=access_token,
 #     verbose=verbose)
