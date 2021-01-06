@@ -1,22 +1,24 @@
 import configargparse
+import argparse
 import logging
+import modules.actions as actions
+
+DEFAULT_CONFIG_FILES = ["run.config"]
 
 
-def parse_command_line():
-    parser = configargparse.ArgParser(default_config_files=["run.config"])
-
-    # Optional args
+def add_subparser(subparsers: argparse._SubParsersAction, name: str, help: str):
+    parser = subparsers.add_parser(
+        name=name,
+        help=help,
+        default_config_files=DEFAULT_CONFIG_FILES,
+    )
     parser.add_argument(
         "-c", "--config-file", is_config_file=True, help="Config filepath."
     )
-    parser.add_argument(
-        "--log-level",
-        choices=logging._levelToName.values(),
-        default=logging.getLevelName(logging.WARNING),
-        help="Set the logging level.",
-    )
+    return parser
 
-    # Authentication
+
+def add_authentication_group(parser: configargparse.ArgumentParser):
     auth_group = parser.add_argument_group(
         title="authentication",
         description="Authentication details are configured (and can be copied from) AppStore Connect->Users & Access->Keys.",
@@ -31,7 +33,8 @@ def parse_command_line():
         help="Private Key from a filepath.",
     )
 
-    # App ID
+
+def add_app_id_group(parser: configargparse.ArgumentParser):
     app_group = parser.add_argument_group(
         title="app",
         description="App can either be identified by App ID (integer) or Bundle ID (string).",
@@ -44,12 +47,62 @@ def parse_command_line():
         "--bundle-id", help='The App\'s Bundle ID in the form "com.example.myapp".'
     )
 
+
+def parse_command_line():
+    global_parser = configargparse.ArgParser(
+        default_config_files=DEFAULT_CONFIG_FILES,
+    )
+
+    # Global args
+    global_parser.add_argument(
+        "-c", "--config-file", is_config_file=True, help="Config filepath."
+    )
+    global_parser.add_argument(
+        "--log-level",
+        choices=logging._levelToName.values(),
+        default=logging.getLevelName(logging.WARNING),
+        help="Set the logging level.",
+    )
+
+    # Action subparsers
+    action_subparsers = global_parser.add_subparsers(
+        title="action",
+        dest="action",
+        required=True,
+        parser_class=configargparse.ArgParser,
+    )
+
+    # Action: apps
+    apps_parser = add_subparser(
+        action_subparsers,
+        "apps",
+        help="Lists all apps under the app store account.",
+    )
+    add_authentication_group(apps_parser)
+
+    # Action: versions
+    versions_parser = add_subparser(
+        action_subparsers,
+        "versions",
+        help="Lists all app versions.",
+    )
+    add_authentication_group(versions_parser)
+    add_app_id_group(versions_parser)
+
+    # Action: screenshots
+    screenshots_parser = add_subparser(
+        action_subparsers,
+        "screenshots",
+        help="Lists the screnshots for an app.",
+    )
+    add_authentication_group(screenshots_parser)
+    add_app_id_group(screenshots_parser)
+
     # Parse
-    args = parser.parse_args()
+    args = global_parser.parse_known_args()[0]  # tuple { matched_args, remaining_args }
 
-    logging.getLogger().setLevel(args.log_level)
-
-    if args.key == None:
+    # Handle loading the auth key from file
+    if "key" in args and "key_file" in args and args.key == None:
         args.key = args.key_file.read()
         args.key_file.close()
 
