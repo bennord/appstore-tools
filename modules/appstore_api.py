@@ -13,6 +13,12 @@ APPSTORE_AUDIENCE = "appstoreconnect-v1"
 APPSTORE_JWT_ALGO = "ES256"
 
 
+class FetchMethod(Enum):
+    GET = auto()
+    POST = auto()
+    PATCH = auto()
+
+
 class AppStoreVersionState(Enum):
     DEVELOPER_REMOVED_FROM_SALE = auto()
     DEVELOPER_REJECTED = auto()
@@ -51,19 +57,18 @@ def create_access_token(issuer_id: str, key_id: str, key: str) -> str:
     return access_token
 
 
-def fetch(path: str, method: str, access_token: str, post_data=None):
+def fetch(path: str, method: FetchMethod, access_token: str, post_data=None):
     headers = {"Authorization": f"Bearer {access_token}"}
     response = {}
 
     url = APPSTORE_URI_ROOT + path if path.startswith("/") else path
 
-    method = method.lower()
-    if method == "get":
+    if method == FetchMethod.GET:
         response = requests.get(url, headers=headers)
-    elif method == "post":
+    elif method == FetchMethod.POST:
         headers["Content-Type"] = "application/json"
         response = requests.post(url=url, headers=headers, data=json.dumps(post_data))
-    elif method == "patch":
+    elif method == FetchMethod.PATCH:
         headers["Content-Type"] = "application/json"
         response = requests.patch(url=url, headers=headers, data=json.dumps(post_data))
 
@@ -95,7 +100,9 @@ def fetch(path: str, method: str, access_token: str, post_data=None):
 def get_apps(
     access_token: str,
 ):
-    return fetch(path=f"/apps", method="get", access_token=access_token)["data"]
+    return fetch(path=f"/apps", method=FetchMethod.GET, access_token=access_token)[
+        "data"
+    ]
 
 
 def get_app_id(
@@ -113,9 +120,9 @@ def get_app(
     app_id: str,
     access_token: str,
 ):
-    return fetch(path=f"/apps/{app_id}", method="get", access_token=access_token)[
-        "data"
-    ]
+    return fetch(
+        path=f"/apps/{app_id}", method=FetchMethod.GET, access_token=access_token
+    )["data"]
 
 
 def get_app_versions(
@@ -123,7 +130,9 @@ def get_app_versions(
     access_token: str,
 ):
     return fetch(
-        path=f"/apps/{app_id}/appStoreVersions", method="get", access_token=access_token
+        path=f"/apps/{app_id}/appStoreVersions",
+        method=FetchMethod.GET,
+        access_token=access_token,
     )["data"]
 
 
@@ -157,7 +166,7 @@ def get_localizations(
 ):
     return fetch(
         path=f"/appStoreVersions/{version_id}/appStoreVersionLocalizations",
-        method="get",
+        method=FetchMethod.GET,
         access_token=access_token,
     )["data"]
 
@@ -168,7 +177,7 @@ def get_screenshot_sets(
 ):
     return fetch(
         path=f"/appStoreVersionLocalizations/{localization_id}/appScreenshotSets",
-        method="get",
+        method=FetchMethod.GET,
         access_token=access_token,
     )["data"]
 
@@ -179,6 +188,6 @@ def get_screenshots(
 ):
     return fetch(
         path=f"/appScreenshotSets/{screenshot_set_id}/appScreenshots",
-        method="get",
+        method=FetchMethod.GET,
         access_token=access_token,
     )["data"]
