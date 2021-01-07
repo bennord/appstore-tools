@@ -1,11 +1,11 @@
 import colorama
-import modules.argparse_util as argparse_util
+import modules.command_line as command_line
 import modules.actions as actions
 import logging
 
 colorama.init()
 
-args = argparse_util.parse_command_line()
+args = command_line.parse_command_line()
 
 logging.getLogger().setLevel(args.log_level)
 
