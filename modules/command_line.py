@@ -6,15 +6,19 @@ import modules.actions as actions
 DEFAULT_CONFIG_FILES = ["run.config"]
 
 
+def add_config_argument(parser: configargparse.ArgumentParser):
+    parser.add_argument(
+        "-c", "--config-file", is_config_file=True, help="Config filepath."
+    )
+
+
 def add_subparser(subparsers: argparse._SubParsersAction, name: str, help: str):
     parser = subparsers.add_parser(
         name=name,
         help=help,
         default_config_files=DEFAULT_CONFIG_FILES,
     )
-    parser.add_argument(
-        "-c", "--config-file", is_config_file=True, help="Config filepath."
-    )
+    add_config_argument(parser)
     return parser
 
 
@@ -54,9 +58,7 @@ def parse_command_line():
     )
 
     # Global args
-    global_parser.add_argument(
-        "-c", "--config-file", is_config_file=True, help="Config filepath."
-    )
+    add_config_argument(global_parser)
     global_parser.add_argument(
         "--log-level",
         choices=logging._levelToName.values(),
