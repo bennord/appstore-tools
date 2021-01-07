@@ -105,6 +105,15 @@ def get_apps(
     ]
 
 
+def get_app(
+    app_id: str,
+    access_token: str,
+):
+    return fetch(
+        path=f"/apps/{app_id}", method=FetchMethod.GET, access_token=access_token
+    )["data"]
+
+
 def get_app_id(
     bundle_id: str,
     access_token: str,
@@ -116,13 +125,12 @@ def get_app_id(
     return int(app_id)
 
 
-def get_app(
+def get_bundle_id(
     app_id: str,
     access_token: str,
-):
-    return fetch(
-        path=f"/apps/{app_id}", method=FetchMethod.GET, access_token=access_token
-    )["data"]
+) -> int:
+    app = get_app(app_id=app_id, access_token=access_token)
+    return app["attributes"]["bundleId"]
 
 
 def get_app_versions(
@@ -188,6 +196,28 @@ def get_screenshots(
 ):
     return fetch(
         path=f"/appScreenshotSets/{screenshot_set_id}/appScreenshots",
+        method=FetchMethod.GET,
+        access_token=access_token,
+    )["data"]
+
+
+def get_preview_sets(
+    localization_id: str,
+    access_token: str,
+):
+    return fetch(
+        path=f"/appStoreVersionLocalizations/{localization_id}/appPreviewSets",
+        method=FetchMethod.GET,
+        access_token=access_token,
+    )["data"]
+
+
+def get_previews(
+    preview_set_id: str,
+    access_token: str,
+):
+    return fetch(
+        path=f"/appPreviewSets/{screenshot_set_id}/appPreviews",
         method=FetchMethod.GET,
         access_token=access_token,
     )["data"]

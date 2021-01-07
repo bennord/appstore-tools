@@ -136,5 +136,7 @@ def run_command_line():
         actions.list_versions(args)
     elif args.action == "screenshots":
         actions.list_screenshots(args)
+    elif args.action == "download":
+        actions.download_assets(args)
 
     return parsed_args
