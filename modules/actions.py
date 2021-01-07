@@ -1,5 +1,4 @@
 import colorama
-import modules.argparse_util as argparse_util
 import modules.appstore_api as appstore
 import sys
 import logging

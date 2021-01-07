@@ -4,6 +4,7 @@ import logging
 import modules.actions as actions
 
 DEFAULT_CONFIG_FILES = ["run.config"]
+DEFAULT_ASSET_DIR = "appstore"
 
 
 def add_config_argument(parser: configargparse.ArgumentParser):
@@ -52,7 +53,7 @@ def add_app_id_group(parser: configargparse.ArgumentParser):
     )
 
 
-def parse_command_line():
+def run_command_line():
     global_parser = configargparse.ArgParser(
         default_config_files=DEFAULT_CONFIG_FILES,
     )
@@ -100,12 +101,40 @@ def parse_command_line():
     add_authentication_group(screenshots_parser)
     add_app_id_group(screenshots_parser)
 
+    # Action: download
+    download_parser = add_subparser(
+        action_subparsers,
+        "download",
+        help="Download all assets for an app.",
+    )
+    add_authentication_group(download_parser)
+    add_app_id_group(download_parser)
+    download_parser.add_argument(
+        "--asset-dir",
+        default=DEFAULT_ASSET_DIR,
+        help="The directory where appstore assets are placed.",
+    )
+
     # Parse
-    args = global_parser.parse_known_args()[0]  # tuple { matched_args, remaining_args }
+    parsed_args = global_parser.parse_known_args()
+
+    # tuple { matched_args, remaining_args }
+    args = parsed_args[0]
 
     # Handle loading the auth key from file
     if "key" in args and "key_file" in args and args.key == None:
         args.key = args.key_file.read()
         args.key_file.close()
 
-    return args
+    # Set LogLevel
+    logging.getLogger().setLevel(args.log_level)
+
+    # Run
+    if args.action == "apps":
+        actions.list_apps(args)
+    elif args.action == "versions":
+        actions.list_versions(args)
+    elif args.action == "screenshots":
+        actions.list_screenshots(args)
+
+    return parsed_args
