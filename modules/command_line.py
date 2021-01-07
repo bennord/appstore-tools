@@ -58,6 +58,7 @@ def add_app_id_group(parser: configargparse.ArgumentParser):
 def run_command_line():
     global_parser = configargparse.ArgParser(
         default_config_files=DEFAULT_CONFIG_FILES,
+        formatter_class=configargparse.ArgumentDefaultsHelpFormatter,
     )
 
     # Global args
