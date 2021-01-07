@@ -41,6 +41,7 @@ def add_subparser(subparsers: argparse._SubParsersAction, name: str, help: str):
         name=name,
         help=help_color(help),
         default_config_files=DEFAULT_CONFIG_FILES,
+        add_config_file_help=False,
     )
     add_config_argument(parser)
     return parser
@@ -49,7 +50,9 @@ def add_subparser(subparsers: argparse._SubParsersAction, name: str, help: str):
 def add_authentication_group(parser: configargparse.ArgumentParser):
     auth_group = parser.add_argument_group(
         title="authentication",
-        description="Authentication details are configured (and can be copied from) AppStore Connect->Users & Access->Keys.",
+        description=help_color(
+            "Authentication details are configured (and can be copied from) AppStore Connect->Users & Access->Keys."
+        ),
     )
     auth_group.add_argument("--issuer-id", required=True, help=help_color("Issuer ID."))
     auth_group.add_argument("--key-id", required=True, help=help_color("Key ID."))
@@ -65,7 +68,9 @@ def add_authentication_group(parser: configargparse.ArgumentParser):
 def add_app_id_group(parser: configargparse.ArgumentParser):
     app_group = parser.add_argument_group(
         title="app",
-        description="App can either be identified by App ID (integer) or Bundle ID (string).",
+        description=help_color(
+            "App can either be identified by App ID (integer) or Bundle ID (string)."
+        ),
     )
     key_group = app_group.add_mutually_exclusive_group(required=True)
     key_group.add_argument(
