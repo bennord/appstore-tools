@@ -2,6 +2,8 @@ import configargparse
 import argparse
 import logging
 import modules.actions as actions
+import requests
+import sys
 
 DEFAULT_CONFIG_FILES = ["run.config"]
 DEFAULT_ASSET_DIR = "appstore"
@@ -130,13 +132,18 @@ def run_command_line():
     logging.getLogger().setLevel(args.log_level)
 
     # Run
-    if args.action == "apps":
-        actions.list_apps(args)
-    elif args.action == "versions":
-        actions.list_versions(args)
-    elif args.action == "screenshots":
-        actions.list_screenshots(args)
-    elif args.action == "download":
-        actions.download_assets(args)
+    try:
+        if args.action == "apps":
+            actions.list_apps(args)
+        elif args.action == "versions":
+            actions.list_versions(args)
+        elif args.action == "screenshots":
+            actions.list_screenshots(args)
+        elif args.action == "download":
+            actions.download_assets(args)
+    except requests.exceptions.SSLError as error:
+        sys.exit(error)
+    except requests.exceptions.ConnectionError as error:
+        sys.exit(error)
 
     return parsed_args
