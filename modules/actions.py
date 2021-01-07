@@ -134,10 +134,10 @@ def download_assets(args):
 
     print(
         color_term(
-            f"{colorama.Fore.GREEN}Downloading app version: "
+            f"{colorama.Fore.GREEN}App: "
             + f"{colorama.Fore.MAGENTA}{bundle_id}{colorama.Fore.RESET} "
-            + f"(id: {colorama.Fore.BLUE}{app_id}{colorama.Fore.RESET}, "
-            + f"live version id: {colorama.Fore.BLUE}{live_id}{colorama.Fore.RESET})"
+            + f"(app_id: {colorama.Fore.BLUE}{app_id}{colorama.Fore.RESET}, "
+            + f"version_id: {colorama.Fore.BLUE}{live_id}{colorama.Fore.RESET})"
         )
     )
 
@@ -151,37 +151,34 @@ def download_assets(args):
         locale = loc_attr["locale"]
         loc_dir = os.path.join(asset_dir, bundle_id, locale)
 
+        print(
+            color_term(
+                colorama.Fore.GREEN
+                + "Locale: "
+                + f"{colorama.Fore.MAGENTA}{locale}{colorama.Fore.RESET} "
+                + f"(loc_id: {colorama.Fore.BLUE}{loc_id}{colorama.Fore.RESET}) "
+            )
+        )
+
         # Locale directory
         os.makedirs(name=loc_dir, exist_ok=True)
 
         # Save Meta Data
-        valid_attr_names = (
-            attr_name
-            for attr_name in [
-                "description",
-                "keywords",
-                "marketingUrl",
-                "promotionalText",
-                "supportUrl",
-                "whatsNew",
-            ]
-            if loc_attr[attr_name] != None
-        )
+        meta_fields = [
+            "description",
+            "keywords",
+            "marketingUrl",
+            "promotionalText",
+            "supportUrl",
+            "whatsNew",
+        ]
 
-        for attr_name in valid_attr_names:
+        for name in meta_fields:
+            content = loc_attr[name] if loc_attr[name] is not None else ""
             write_txt_file(
-                path=os.path.join(loc_dir, attr_name + ".txt"),
-                content=loc_attr[attr_name],
+                path=os.path.join(loc_dir, name + ".txt"),
+                content=content,
             )
-
-        print(
-            color_term(
-                colorama.Fore.GREEN
-                + "Downloading screenshots: "
-                + f"{colorama.Fore.MAGENTA}{locale}{colorama.Fore.RESET} "
-                + f"(id: {colorama.Fore.BLUE}{loc_id}{colorama.Fore.RESET}) "
-            )
-        )
 
         screenshot_sets = appstore.get_screenshot_sets(
             localization_id=loc_id, access_token=access_token
@@ -202,13 +199,7 @@ def download_assets(args):
             for screenshot in screenshots:
                 ss_filename = screenshot["attributes"]["fileName"]
                 ss_path = os.path.join(ss_set_dir, ss_filename)
-                print(
-                    color_term(
-                        colorama.Fore.GREEN
-                        + "Downloading screenshot: "
-                        + f"{colorama.Fore.MAGENTA}{ss_path}{colorama.Fore.RESET}"
-                    )
-                )
+                print(ss_path)
 
                 response = fetch_screenshot(screenshot)
                 if response.ok:
@@ -218,3 +209,5 @@ def download_assets(args):
                     )
                 else:
                     print(color_term(colorama.Fore.RED + "FAILED"))
+
+    print(color_term(colorama.Fore.GREEN + "Download complete"))
