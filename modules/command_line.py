@@ -162,9 +162,6 @@ def add_app_id_group(parser: configargparse.ArgumentParser):
 
 
 def run_command_line():
-    # Consts
-    action_metavar = "action"
-
     # Global
     global_parser = configargparse.ArgParser(
         default_config_files=DEFAULT_CONFIG_FILES,
@@ -185,9 +182,9 @@ def run_command_line():
 
     # Action subparsers
     action_subparsers = global_parser.add_subparsers(
+        title="Action commands",
         dest="action",
-        metavar=action_metavar,
-        help="Choose an action to run.",
+        metavar="action",
         required=True,
         parser_class=configargparse.ArgParser,
     )
