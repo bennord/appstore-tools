@@ -19,6 +19,10 @@ LOGO_ART = """
       |_| |_|                                               
 """
 
+EXTRA_INFO_COLOR = colorama.Style.DIM
+KEYWORD_COLOR = colorama.Style.DIM + colorama.Fore.LIGHTCYAN_EX
+USAGE_COLOR = colorama.Style.DIM + colorama.Fore.CYAN
+
 
 class PrettyHelpFormatter(argparse_color_formatter.ColorRawDescriptionHelpFormatter):
     def _get_help_string(self, action):
@@ -26,12 +30,13 @@ class PrettyHelpFormatter(argparse_color_formatter.ColorRawDescriptionHelpFormat
         if action.choices is not None:
             choice_strs = [str(choice) for choice in action.choices]
             choices_colored = [
-                f"{colorama.Fore.LIGHTCYAN_EX}{choice}{colorama.Fore.RESET}"
-                for choice in choice_strs
+                color_term(KEYWORD_COLOR + choice) for choice in choice_strs
             ]
-            choices_joined = ", ".join(choices_colored)
+            choices_joined = color_term(EXTRA_INFO_COLOR + ", ").join(choices_colored)
             help += (
-                f" {colorama.Style.DIM}{{{choices_joined}}}{colorama.Style.RESET_ALL}"
+                color_term(EXTRA_INFO_COLOR + " {")
+                + choices_joined
+                + color_term(EXTRA_INFO_COLOR + "}")
             )
 
         if "%(default)" not in action.help:
@@ -44,35 +49,32 @@ class PrettyHelpFormatter(argparse_color_formatter.ColorRawDescriptionHelpFormat
                     configargparse.ZERO_OR_MORE,
                 ]
                 if action.option_strings or action.nargs in defaulting_nargs:
-                    help += f" {colorama.Style.DIM}(default: {colorama.Fore.LIGHTCYAN_EX}%(default)s{colorama.Fore.RESET}){colorama.Style.RESET_ALL}"
+                    help += (
+                        color_term(EXTRA_INFO_COLOR + " (default:")
+                        + color_term(KEYWORD_COLOR + "%(default)s")
+                        + color_term(EXTRA_INFO_COLOR + ")")
+                    )
         return help
 
     def _format_usage(self, usage, actions, groups, prefix):
-        if prefix is None:
-            prefix = "Usage:"
-        header = f"{LOGO_ART}\n{prefix}\n  "
+        if prefix is not None or usage is not None:
+            return super()._format_usage(usage, actions, groups, prefix)
 
-        return (
-            header
-            + colorama.Style.DIM
-            + colorama.Fore.CYAN
+        prefix = f"{LOGO_ART}\nUsage:\n  "
+        usage_colored = color_term(
+            USAGE_COLOR
             + super()._format_usage(
                 usage,
                 actions,
                 groups,
                 "",
             )
-            + colorama.Style.RESET_ALL
         )
+        return prefix + usage_colored
 
     def _format_action(self, action):
         action_invocation = super()._format_action_invocation(action)
-        action_invocation_colored = (
-            colorama.Style.DIM
-            + colorama.Fore.LIGHTCYAN_EX
-            + action_invocation
-            + colorama.Style.RESET_ALL
-        )
+        action_invocation_colored = color_term(KEYWORD_COLOR + action_invocation)
         action_text = super()._format_action(action)
         return action_text.replace(action_invocation, action_invocation_colored, 1)
 
@@ -83,8 +85,24 @@ def add_config_argument(parser: configargparse.ArgumentParser):
         "--config-file",
         is_config_file=True,
         help="Args that start with '--' (eg. --log-level) can also be set in a config file (run.config or specified via -c). "
-        + "Config file syntax allows: key=value, flag=true, stuff=[a,b,c] (for details, see syntax at https://goo.gl/R74nmi). "
+        + "Config file syntax allows: key=value, flag=true, stuff=[a,b,c] "
+        + color_term(
+            EXTRA_INFO_COLOR + "(for details, see syntax at https://goo.gl/R74nmi)"
+        )
+        + ". "
         + "If an arg is specified in more than one place, then commandline values override config file values which override defaults.",
+    )
+
+
+def add_help_argument(parser: configargparse.ArgumentParser):
+    parser.add_argument(
+        "-h",
+        "--help",
+        action="help",
+        help="Show this help message."
+        + color_term(EXTRA_INFO_COLOR + " (actions:")
+        + color_term(KEYWORD_COLOR + "action --help")
+        + color_term(EXTRA_INFO_COLOR + ")"),
     )
 
 
@@ -102,8 +120,10 @@ def add_subparser(subparsers: argparse._SubParsersAction, name: str, help: str):
         help=help,
         default_config_files=DEFAULT_CONFIG_FILES,
         add_config_file_help=False,
+        add_help=False,
         formatter_class=PrettyHelpFormatter,
     )
+    add_help_argument(parser)
     add_config_argument(parser)
     return parser
 
@@ -142,13 +162,17 @@ def add_app_id_group(parser: configargparse.ArgumentParser):
 
 
 def run_command_line():
+    # Consts
+    action_metavar = "action"
+
+    # Global
     global_parser = configargparse.ArgParser(
         default_config_files=DEFAULT_CONFIG_FILES,
         add_config_file_help=False,
         formatter_class=PrettyHelpFormatter,
+        add_help=False,
     )
-
-    # Global args
+    add_help_argument(global_parser)
     add_config_argument(global_parser)
     log_level_choices = list(logging._levelToName.values())
     global_parser.add_argument(
@@ -162,7 +186,7 @@ def run_command_line():
     # Action subparsers
     action_subparsers = global_parser.add_subparsers(
         dest="action",
-        metavar="action",
+        metavar=action_metavar,
         help="Choose an action to run.",
         required=True,
         parser_class=configargparse.ArgParser,
