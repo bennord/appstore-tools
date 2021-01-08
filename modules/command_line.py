@@ -100,7 +100,7 @@ def add_help_argument(parser: configargparse.ArgumentParser):
         "--help",
         action="help",
         help="Show this help message."
-        + color_term(EXTRA_INFO_COLOR + " (actions:")
+        + color_term(EXTRA_INFO_COLOR + " (help for actions: ")
         + color_term(KEYWORD_COLOR + "action --help")
         + color_term(EXTRA_INFO_COLOR + ")"),
     )
@@ -130,7 +130,7 @@ def add_subparser(subparsers: argparse._SubParsersAction, name: str, help: str):
 
 def add_authentication_group(parser: configargparse.ArgumentParser):
     auth_group = parser.add_argument_group(
-        title="authentication",
+        title="Authentication",
         description="Authentication details are configured (and can be copied from) AppStore Connect->Users & Access->Keys.",
     )
     auth_group.add_argument("--issuer-id", required=True, help="Issuer ID.")
@@ -146,7 +146,7 @@ def add_authentication_group(parser: configargparse.ArgumentParser):
 
 def add_app_id_group(parser: configargparse.ArgumentParser):
     app_group = parser.add_argument_group(
-        title="app",
+        title="App ID",
         description="App can either be identified by App ID (integer) or Bundle ID (string).",
     )
     key_group = app_group.add_mutually_exclusive_group(required=True)
