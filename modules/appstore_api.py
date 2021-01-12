@@ -236,7 +236,7 @@ def get_previews(
     access_token: str,
 ):
     return fetch(
-        path=f"/appPreviewSets/{screenshot_set_id}/appPreviews",
+        path=f"/appPreviewSets/{preview_set_id}/appPreviews",
         method=FetchMethod.GET,
         access_token=access_token,
     )["data"]

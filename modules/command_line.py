@@ -227,6 +227,15 @@ def run_command_line():
     add_authentication_group(screenshots_parser)
     add_app_id_group(screenshots_parser)
 
+    # Action: previews
+    previews_parser = add_subparser(
+        action_subparsers,
+        "previews",
+        help="Lists the previews for an app.",
+    )
+    add_authentication_group(previews_parser)
+    add_app_id_group(previews_parser)
+
     # Action: download
     download_parser = add_subparser(
         action_subparsers,
@@ -269,6 +278,8 @@ def run_command_line():
             actions.list_versions(args)
         elif args.action == "screenshots":
             actions.list_screenshots(args)
+        elif args.action == "previews":
+            actions.list_previews(args)
         elif args.action == "download":
             actions.download_assets(args)
     except requests.exceptions.SSLError as error:

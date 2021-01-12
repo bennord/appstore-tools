@@ -106,13 +106,55 @@ def list_screenshots(args):
         screenshot_sets = appstore.get_screenshot_sets(
             localization_id=loc_id, access_token=access_token
         )
+        print(
+            color_term(colorama.Fore.GREEN + f"loc_id {loc_id}: ")
+            + f"Found {colorama.Fore.CYAN}{len(screenshot_sets)}{colorama.Fore.RESET} screenshot sets."
+        )
 
-        screenshot_set_ids = (s["id"] for s in screenshot_sets)
-        for ss_set_id in screenshot_set_ids:
-            screenshot_sets = appstore.get_screenshots(
+        for screenshot_set in screenshot_sets:
+            ss_set_id = screenshot_set["id"]
+            ss_display_type = screenshot_set["attributes"]["screenshotDisplayType"]
+            screenshots = appstore.get_screenshots(
                 screenshot_set_id=ss_set_id, access_token=access_token
             )
-            print(json_term(screenshot_sets))
+            print(
+                color_term(colorama.Fore.GREEN + f"screenshotDisplayType: ")
+                + ss_display_type
+            )
+            print(json_term(screenshots))
+
+
+def list_previews(args):
+    access_token = get_access_token(args)
+    app_id = get_app_id(args, access_token)
+
+    logging.info(color_term(colorama.Fore.GREEN + "app_id: ") + str(app_id))
+
+    live_id = appstore.get_app_live(app_id=app_id, access_token=access_token)["id"]
+    logging.info(color_term(colorama.Fore.GREEN + "app_live_id: ") + str(live_id))
+
+    localizations = appstore.get_localizations(
+        version_id=live_id, access_token=access_token
+    )
+
+    localization_ids = (l["id"] for l in localizations)
+    for loc_id in localization_ids:
+        preview_sets = appstore.get_preview_sets(
+            localization_id=loc_id, access_token=access_token
+        )
+        print(
+            color_term(colorama.Fore.GREEN + f"loc_id {loc_id}: ")
+            + f"Found {colorama.Fore.CYAN}{len(preview_sets)}{colorama.Fore.RESET} preview sets."
+        )
+
+        for preview_set in preview_sets:
+            preview_set_id = preview_set["id"]
+            preview_type = preview_set["attributes"]["previewType"]
+            preview_set = appstore.get_previews(
+                preview_set_id=preview_set_id, access_token=access_token
+            )
+            print(color_term(colorama.Fore.GREEN + f"previewType: ") + preview_type)
+            print(json_term(preview_set))
 
 
 def download_assets(args):
@@ -137,7 +179,7 @@ def download_assets(args):
             f"{colorama.Fore.GREEN}App: "
             + f"{colorama.Fore.MAGENTA}{bundle_id}{colorama.Fore.RESET} "
             + f"(app_id: {colorama.Fore.BLUE}{app_id}{colorama.Fore.RESET}, "
-            + f"version_id: {colorama.Fore.BLUE}{live_id}{colorama.Fore.RESET})"
+            + f"version_id [Live]: {colorama.Fore.BLUE}{live_id}{colorama.Fore.RESET})"
         )
     )
 
@@ -209,5 +251,41 @@ def download_assets(args):
                     )
                 else:
                     print(color_term(colorama.Fore.RED + "FAILED"))
+
+        preview_sets = appstore.get_preview_sets(
+            localization_id=loc_id, access_token=access_token
+        )
+
+        for preview_set in preview_sets:
+            preview_set_id = preview_set["id"]
+            preview_type = ss_set["attributes"]["previewType"]
+            preview_set_dir = os.path.join(loc_dir, preview_type)
+
+            # Preview Set directory
+            os.makedirs(name=preview_set_dir, exist_ok=True)
+
+            previews = appstore.get_previews(
+                preview_set_id=preview_set_id, access_token=access_token
+            )
+
+            for preview in previews:
+                preview_filename = preview["attributes"]["fileName"]
+                preview_path = os.path.join(preview_set_dir, preview_filename)
+                print(preview_path)
+
+                json_term(preview)
+                print(
+                    color_term(colorama.Fore.RED + "PREVIEW DOWNLOAD NOT IMPLEMENTED")
+                )
+                # TODO: add fetch_preview functionality similar to screenshots
+
+                # response = fetch_screenshot(screenshot)
+                # if response.ok:
+                #     write_binary_file(
+                #         path=ss_path,
+                #         content=response.content,
+                #     )
+                # else:
+                #     print(color_term(colorama.Fore.RED + "FAILED"))
 
     print(color_term(colorama.Fore.GREEN + "Download complete"))
