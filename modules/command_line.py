@@ -23,21 +23,19 @@ EXTRA_INFO_COLOR = colorama.Style.DIM
 KEYWORD_COLOR = colorama.Style.DIM + colorama.Fore.LIGHTCYAN_EX
 USAGE_COLOR = colorama.Style.DIM + colorama.Fore.CYAN
 
+clr_extra = lambda x: EXTRA_INFO_COLOR + x + colorama.Style.RESET_ALL
+clr_keyword = lambda x: KEYWORD_COLOR + x + colorama.Style.RESET_ALL
+clr_usage = lambda x: USAGE_COLOR + x + colorama.Style.RESET_ALL
+
 
 class PrettyHelpFormatter(argparse_color_formatter.ColorRawDescriptionHelpFormatter):
     def _get_help_string(self, action):
         help = action.help
         if action.choices is not None:
             choice_strs = [str(choice) for choice in action.choices]
-            choices_colored = [
-                color_term(KEYWORD_COLOR + choice) for choice in choice_strs
-            ]
-            choices_joined = color_term(EXTRA_INFO_COLOR + ", ").join(choices_colored)
-            help += (
-                color_term(EXTRA_INFO_COLOR + " {")
-                + choices_joined
-                + color_term(EXTRA_INFO_COLOR + "}")
-            )
+            choices_colored = [clr_keyword(choice) for choice in choice_strs]
+            choices_joined = clr_extra(", ").join(choices_colored)
+            help += clr_extra(" {") + choices_joined + clr_extra("}")
 
         if "%(default)" not in action.help:
             if (
@@ -50,9 +48,9 @@ class PrettyHelpFormatter(argparse_color_formatter.ColorRawDescriptionHelpFormat
                 ]
                 if action.option_strings or action.nargs in defaulting_nargs:
                     help += (
-                        color_term(EXTRA_INFO_COLOR + " (default:")
-                        + color_term(KEYWORD_COLOR + "%(default)s")
-                        + color_term(EXTRA_INFO_COLOR + ")")
+                        clr_extra(" (default:")
+                        + clr_extra("%(default)s")
+                        + clr_extra(")")
                     )
         return help
 
@@ -61,9 +59,8 @@ class PrettyHelpFormatter(argparse_color_formatter.ColorRawDescriptionHelpFormat
             return super()._format_usage(usage, actions, groups, prefix)
 
         prefix = f"{LOGO_ART}\nUsage:\n  "
-        usage_colored = color_term(
-            USAGE_COLOR
-            + super()._format_usage(
+        usage_colored = clr_usage(
+            super()._format_usage(
                 usage,
                 actions,
                 groups,
@@ -74,7 +71,7 @@ class PrettyHelpFormatter(argparse_color_formatter.ColorRawDescriptionHelpFormat
 
     def _format_action(self, action):
         action_invocation = super()._format_action_invocation(action)
-        action_invocation_colored = color_term(KEYWORD_COLOR + action_invocation)
+        action_invocation_colored = clr_keyword(action_invocation)
         action_text = super()._format_action(action)
         return action_text.replace(action_invocation, action_invocation_colored, 1)
 
@@ -86,9 +83,7 @@ def add_config_argument(parser: configargparse.ArgumentParser):
         is_config_file=True,
         help="Args that start with '--' (eg. --log-level) can also be set in a config file (run.config or specified via -c). "
         + "Config file syntax allows: key=value, flag=true, stuff=[a,b,c] "
-        + color_term(
-            EXTRA_INFO_COLOR + "(for details, see syntax at https://goo.gl/R74nmi)"
-        )
+        + clr_extra("(for details, see syntax at https://goo.gl/R74nmi)")
         + ". "
         + "If an arg is specified in more than one place, then commandline values override config file values which override defaults.",
     )
@@ -100,9 +95,9 @@ def add_help_argument(parser: configargparse.ArgumentParser):
         "--help",
         action="help",
         help="Show this help message."
-        + color_term(EXTRA_INFO_COLOR + " (help for actions: ")
-        + color_term(KEYWORD_COLOR + "action --help")
-        + color_term(EXTRA_INFO_COLOR + ")"),
+        + clr_extra(" (help for actions: ")
+        + clr_keyword("action --help")
+        + clr_extra(")"),
     )
 
 
@@ -132,9 +127,8 @@ def add_subparser(subparsers: argparse._SubParsersAction, name: str, help: str):
 def add_authentication_group(parser: configargparse.ArgumentParser):
     auth_group = parser.add_argument_group(
         title="Authentication",
-        description=color_term(
-            EXTRA_INFO_COLOR
-            + "Authentication details are configured (and can be copied from) AppStore Connect->Users & Access->Keys."
+        description=clr_extra(
+            "Authentication details are configured (and can be copied from) AppStore Connect->Users & Access->Keys."
         ),
     )
     auth_group.add_argument("--issuer-id", required=True, help="Issuer ID.")
@@ -151,9 +145,8 @@ def add_authentication_group(parser: configargparse.ArgumentParser):
 def add_app_id_group(parser: configargparse.ArgumentParser):
     app_group = parser.add_argument_group(
         title="App ID",
-        description=color_term(
-            EXTRA_INFO_COLOR
-            + "App can either be identified by App ID (integer) or Bundle ID (string)."
+        description=clr_extra(
+            "App can either be identified by App ID (integer) or Bundle ID (string)."
         ),
     )
     key_group = app_group.add_mutually_exclusive_group(required=True)
