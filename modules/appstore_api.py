@@ -13,6 +13,10 @@ APPSTORE_AUDIENCE = "appstoreconnect-v1"
 APPSTORE_JWT_ALGO = "ES256"
 
 
+class ResourceNotFoundException(Exception):
+    pass
+
+
 class FetchMethod(Enum):
     GET = auto()
     POST = auto()
@@ -72,6 +76,13 @@ def fetch(path: str, method: FetchMethod, access_token: str, post_data=None):
         headers["Content-Type"] = "application/json"
         response = requests.patch(url=url, headers=headers, data=json.dumps(post_data))
 
+    if response.status_code == 404:
+        raise ResourceNotFoundException(
+            f"Resource not found at {url} (HttpError {404})"
+        )
+
+    response.raise_for_status()
+
     content_type = response.headers["content-type"]
 
     if content_type == "application/json":
@@ -119,10 +130,13 @@ def get_app_id(
     access_token: str,
 ) -> int:
     apps = get_apps(access_token)
-    app_id = next(
-        app["id"] for app in apps if app["attributes"]["bundleId"] == bundle_id
-    )
-    return int(app_id)
+    try:
+        app_id = next(
+            app["id"] for app in apps if app["attributes"]["bundleId"] == bundle_id
+        )
+        return int(app_id)
+    except StopIteration:
+        raise ResourceNotFoundException(f'No app matching bundle-id "{bundle_id}"')
 
 
 def get_bundle_id(
@@ -149,12 +163,17 @@ def get_app_version(
     app_store_state: AppStoreVersionState,
     access_token: str,
 ):
-    app_store_versions = get_app_versions(app_id, access_token)
-    return next(
-        v
-        for v in app_store_versions
-        if v["attributes"]["appStoreState"] == app_store_state.name
-    )
+    try:
+        app_store_versions = get_app_versions(app_id, access_token)
+        return next(
+            v
+            for v in app_store_versions
+            if v["attributes"]["appStoreState"] == app_store_state.name
+        )
+    except StopIteration:
+        raise ResourceNotFoundException(
+            f'No app version matching state "{app_store_state.name}"'
+        )
 
 
 def get_app_live(

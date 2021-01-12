@@ -12,9 +12,9 @@ def get_access_token(args):
         access_token = appstore.create_access_token(
             issuer_id=args.issuer_id, key_id=args.key_id, key=args.key
         )
+        return access_token
     except ValueError as error:
         sys.exit(error)
-    return access_token
 
 
 def get_app_id(args, access_token):

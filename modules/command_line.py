@@ -2,6 +2,7 @@ import configargparse
 import argparse
 import logging
 import modules.actions as actions
+import modules.appstore_api as appstore
 import requests
 import sys
 from modules.print_util import color_term
@@ -101,6 +102,26 @@ def add_help_argument(parser: configargparse.ArgumentParser):
     )
 
 
+def add_log_level_argument(parser: configargparse.ArgumentParser):
+    log_level_choices = list(logging._levelToName.values())
+    parser.add_argument(
+        "--log-level",
+        choices=log_level_choices,
+        default=logging.getLevelName(logging.WARNING),
+        metavar="LOG_LEVEL",
+        help="Set the logging level.",
+    )
+
+
+def add_global_group(parser: configargparse.ArgumentParser):
+    global_group = parser.add_argument_group(
+        title="General options",
+    )
+    add_help_argument(global_group)
+    add_config_argument(global_group)
+    add_log_level_argument(global_group)
+
+
 def add_asset_dir_argument(parser: configargparse.ArgumentParser):
     parser.add_argument(
         "--asset-dir",
@@ -119,8 +140,7 @@ def add_subparser(subparsers: argparse._SubParsersAction, name: str, help: str):
         epilog=" ",  # leave an empty line after the message
         formatter_class=PrettyHelpFormatter,
     )
-    add_help_argument(parser)
-    add_config_argument(parser)
+    add_global_group(parser)
     return parser
 
 
@@ -170,16 +190,7 @@ def run_command_line():
         add_help=False,
         epilog=" ",  # leave an empty line after the message
     )
-    add_help_argument(global_parser)
-    add_config_argument(global_parser)
-    log_level_choices = list(logging._levelToName.values())
-    global_parser.add_argument(
-        "--log-level",
-        choices=log_level_choices,
-        default=logging.getLevelName(logging.WARNING),
-        metavar="LOG_LEVEL",
-        help="Set the logging level.",
-    )
+    add_global_group(global_parser)
 
     # Action subparsers
     action_subparsers = global_parser.add_subparsers(
@@ -263,6 +274,10 @@ def run_command_line():
     except requests.exceptions.SSLError as error:
         sys.exit(error)
     except requests.exceptions.ConnectionError as error:
+        sys.exit(error)
+    except requests.exceptions.HTTPError as error:
+        sys.exit(error)
+    except appstore.ResourceNotFoundException as error:
         sys.exit(error)
 
     return parsed_args
