@@ -282,6 +282,8 @@ def run_command_line():
             actions.list_previews(args)
         elif args.action == "download":
             actions.download_assets(args)
+        elif args.action == "publish":
+            actions.publish_assets(args)
     except requests.exceptions.SSLError as error:
         sys.exit(error)
     except requests.exceptions.ConnectionError as error:

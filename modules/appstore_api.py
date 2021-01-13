@@ -8,6 +8,9 @@ import logging
 from enum import Enum, auto
 from .print_util import json_term, color_term
 
+# TODO: remove pylint "disable" directives when pylint supports python 3.9 completely
+from typing import TypedDict, Optional
+
 APPSTORE_URI_ROOT = "https://api.appstoreconnect.apple.com/v1"
 APPSTORE_AUDIENCE = "appstoreconnect-v1"
 APPSTORE_JWT_ALGO = "ES256"
@@ -23,7 +26,7 @@ class FetchMethod(Enum):
     PATCH = auto()
 
 
-class AppStoreVersionState(Enum):
+class VersionState(Enum):
     DEVELOPER_REMOVED_FROM_SALE = auto()
     DEVELOPER_REJECTED = auto()
     IN_REVIEW = auto()
@@ -41,6 +44,33 @@ class AppStoreVersionState(Enum):
     WAITING_FOR_EXPORT_COMPLIANCE = auto()
     WAITING_FOR_REVIEW = auto()
     REPLACED_WITH_NEW_VERSION = auto()
+
+
+editable_version_states = [
+    VersionState.PREPARE_FOR_SUBMISSION,
+    VersionState.WAITING_FOR_REVIEW,
+    VersionState.WAITING_FOR_EXPORT_COMPLIANCE,
+    VersionState.REJECTED,
+    VersionState.METADATA_REJECTED,
+    VersionState.DEVELOPER_REJECTED,
+]
+
+
+class VersionLocalizationData(TypedDict):  # pylint: disable=inherit-non-class
+    description: Optional[str]  # pylint: disable=unsubscriptable-object
+    keywords: Optional[str]  # pylint: disable=unsubscriptable-object
+    marketingUrl: Optional[str]  # pylint: disable=unsubscriptable-object
+    promotionalText: Optional[str]  # pylint: disable=unsubscriptable-object
+    supportUrl: Optional[str]  # pylint: disable=unsubscriptable-object
+    whatsNew: Optional[str]  # pylint: disable=unsubscriptable-object
+
+
+def version_state_is_editable(version_state: VersionState) -> bool:
+    return version_state in editable_version_states
+
+
+def version_state_is_live(version_state: VersionState) -> bool:
+    return version_state == VersionState.READY_FOR_SALE
 
 
 def create_access_token(issuer_id: str, key_id: str, key: str) -> str:
@@ -147,7 +177,7 @@ def get_bundle_id(
     return app["attributes"]["bundleId"]
 
 
-def get_app_versions(
+def get_versions(
     app_id: str,
     access_token: str,
 ):
@@ -158,36 +188,50 @@ def get_app_versions(
     )["data"]
 
 
-def get_app_version(
+def get_versions_in_state(
     app_id: str,
-    app_store_state: AppStoreVersionState,
+    version_state: VersionState,
     access_token: str,
 ):
-    try:
-        app_store_versions = get_app_versions(app_id, access_token)
-        return next(
-            v
-            for v in app_store_versions
-            if v["attributes"]["appStoreState"] == app_store_state.name
-        )
-    except StopIteration:
-        raise ResourceNotFoundException(
-            f'No app version matching state "{app_store_state.name}"'
-        )
+    app_store_versions = get_versions(app_id, access_token)
+    return [
+        v
+        for v in app_store_versions
+        if v["attributes"]["appStoreState"] == version_state.name
+    ]
 
 
-def get_app_live(
+def get_versions_editable(
     app_id: str,
     access_token: str,
 ):
-    return get_app_version(
+    app_store_versions = get_versions(app_id, access_token)
+    return [
+        v
+        for v in app_store_versions
+        if version_state_is_editable(v["attributes"]["appStoreState"])
+    ]
+
+
+def get_version_live(
+    app_id: str,
+    access_token: str,
+):
+    versions_live = get_versions_in_state(
         app_id=app_id,
-        app_store_state=AppStoreVersionState.READY_FOR_SALE,
+        version_state=VersionState.READY_FOR_SALE,
         access_token=access_token,
     )
 
+    if len(versions_live) == 0:
+        raise ResourceNotFoundException(
+            f'No app version matching state "{VersionState.READY_FOR_SALE.name}"'
+        )
+    else:
+        return versions_live[0]
 
-def get_localizations(
+
+def get_version_localizations(
     version_id: str,
     access_token: str,
 ):
@@ -196,6 +240,21 @@ def get_localizations(
         method=FetchMethod.GET,
         access_token=access_token,
     )["data"]
+
+
+def update_version_localization(
+    localization_id: str,
+    localization_data: VersionLocalizationData,
+    access_token: str,
+):
+    """Updates the meta data for the specified App Version Localization.
+    Some data fields require the App Version to be in an editable state."""
+    fetch(
+        path=f"/appStoreVersionLocalizations/{localization_id}",
+        method=FetchMethod.PATCH,
+        access_token=access_token,
+        post_data=localization_data,
+    )
 
 
 def get_screenshot_sets(

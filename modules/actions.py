@@ -44,16 +44,22 @@ def fetch_screenshot(screenshot_info: object):
     return requests.get(url)
 
 
-def write_binary_file(path: str, content: bytes):
-    file = open(file=path, mode="wb")
-    file.write(content)
-    file.close()
+def write_binary_file(path: str, content: bytes) -> None:
+    with open(file=path, mode="wb") as file:
+        file.write(content)
 
 
-def write_txt_file(path: str, content: str):
-    file = open(file=path, mode="w")
-    file.write(content)
-    file.close()
+def write_txt_file(path: str, content: str) -> None:
+    with open(file=path, mode="w") as file:
+        file.write(content)
+
+
+def read_txt_file(path: str) -> str:
+    try:
+        with open(file=path, mode="r") as file:
+            return file.read()
+    except FileNotFoundError:
+        return ""
 
 
 def list_apps(args):
@@ -76,7 +82,7 @@ def list_versions(args):
     access_token = get_access_token(args)
     app_id = get_app_id(args, access_token)
 
-    app_versions = appstore.get_app_versions(app_id=app_id, access_token=access_token)
+    app_versions = appstore.get_versions(app_id=app_id, access_token=access_token)
     app_versions_selected = [
         {
             "id": v["id"],
@@ -94,10 +100,10 @@ def list_screenshots(args):
 
     logging.info(color_term(colorama.Fore.GREEN + "app_id: ") + str(app_id))
 
-    live_id = appstore.get_app_live(app_id=app_id, access_token=access_token)["id"]
+    live_id = appstore.get_version_live(app_id=app_id, access_token=access_token)["id"]
     logging.info(color_term(colorama.Fore.GREEN + "app_live_id: ") + str(live_id))
 
-    localizations = appstore.get_localizations(
+    localizations = appstore.get_version_localizations(
         version_id=live_id, access_token=access_token
     )
 
@@ -130,10 +136,10 @@ def list_previews(args):
 
     logging.info(color_term(colorama.Fore.GREEN + "app_id: ") + str(app_id))
 
-    live_id = appstore.get_app_live(app_id=app_id, access_token=access_token)["id"]
+    live_id = appstore.get_version_live(app_id=app_id, access_token=access_token)["id"]
     logging.info(color_term(colorama.Fore.GREEN + "app_live_id: ") + str(live_id))
 
-    localizations = appstore.get_localizations(
+    localizations = appstore.get_version_localizations(
         version_id=live_id, access_token=access_token
     )
 
@@ -172,7 +178,7 @@ def download_assets(args):
         )
     )
 
-    live_id = appstore.get_app_live(app_id=app_id, access_token=access_token)["id"]
+    live_id = appstore.get_version_live(app_id=app_id, access_token=access_token)["id"]
 
     print(
         color_term(
@@ -183,7 +189,7 @@ def download_assets(args):
         )
     )
 
-    localizations = appstore.get_localizations(
+    localizations = appstore.get_version_localizations(
         version_id=live_id, access_token=access_token
     )
 
@@ -205,20 +211,10 @@ def download_assets(args):
         # Locale directory
         os.makedirs(name=loc_dir, exist_ok=True)
 
-        # Save Meta Data
-        meta_fields = [
-            "description",
-            "keywords",
-            "marketingUrl",
-            "promotionalText",
-            "supportUrl",
-            "whatsNew",
-        ]
-
-        for name in meta_fields:
-            content = loc_attr[name] if loc_attr[name] is not None else ""
+        for key in appstore.VersionLocalizationData.__annotations__.keys():
+            content = loc_attr[key] if loc_attr[key] is not None else ""
             write_txt_file(
-                path=os.path.join(loc_dir, name + ".txt"),
+                path=os.path.join(loc_dir, key + ".txt"),
                 content=content,
             )
 
@@ -289,3 +285,89 @@ def download_assets(args):
                 #     print(color_term(colorama.Fore.RED + "FAILED"))
 
     print(color_term(colorama.Fore.GREEN + "Download complete"))
+
+
+def publish_assets(args):
+    access_token = get_access_token(args)
+    app_id = get_app_id(args, access_token)
+    bundle_id = get_bundle_id(args, access_token)
+    asset_dir = args.asset_dir
+
+    print(
+        color_term(
+            colorama.Fore.GREEN
+            + "Publishing assets from local dir: "
+            + colorama.Fore.MAGENTA
+            + asset_dir
+        )
+    )
+
+    # Application directory
+    app_dir = os.path.join(asset_dir, bundle_id)
+    if not os.path.isdir(app_dir):
+        print(color_term(colorama.Fore.RED + "No app directory found: ") + app_dir)
+        return
+
+    versions = appstore.get_versions_editable(app_id=app_id, access_token=access_token)
+    print(
+        f"Found {colorama.Fore.CYAN}{len(versions)}{colorama.Fore.RESET} editable app versions."
+    )
+
+    for v in versions:
+        version_id = v["id"]
+        version_state = v["attributes"]["appStoreState"]
+
+        localizations = appstore.get_version_localizations(
+            version_id=version_id, access_token=access_token
+        )
+
+        for loc in localizations:
+            loc_id = loc["id"]
+            loc_attr = loc["attributes"]
+            locale = loc_attr["locale"]
+            loc_dir = os.path.join(app_dir, locale)
+
+            if not os.path.isdir(loc_dir):
+                print(
+                    color_term(
+                        colorama.Fore.RED + "No app localization directory found: "
+                    )
+                    + loc_dir
+                )
+                continue
+
+            # Normalize all attribute values to strings
+            for key in appstore.VersionLocalizationData.__annotations__.keys():
+                if loc_attr[key] is None:
+                    loc_attr[key] = ""
+
+            # Load local data from disk
+            file_loc_data: appstore.VersionLocalizationData = {}
+            for key in appstore.VersionLocalizationData.__annotations__.keys():
+                path = os.path.join(loc_dir, key + ".txt")
+                file_loc_data[key] = read_txt_file(path)
+
+            # Only need to update if there are differences
+            if any(file_loc_data[key] != loc_attr[key] for key in file_loc_data.keys()):
+                print(
+                    color_term(colorama.Fore.GREEN + "Version ")
+                    + color_term(colorama.Fore.BLUE + str(version_state))
+                    + color_term(colorama.Fore.GREEN + ", locale ")
+                    + color_term(colorama.Fore.BLUE + str(locale))
+                    + ": "
+                    + " detected changes... updating"
+                )
+                appstore.update_version_localization(
+                    localization_id=loc_id,
+                    access_token=access_token,
+                    localization_data=file_loc_data,
+                )
+            else:
+                print(
+                    color_term(colorama.Fore.GREEN + "Version ")
+                    + color_term(colorama.Fore.BLUE + str(version_state))
+                    + color_term(colorama.Fore.GREEN + ", locale ")
+                    + color_term(colorama.Fore.BLUE + str(locale))
+                    + ": "
+                    + " no changes... skipping"
+                )
