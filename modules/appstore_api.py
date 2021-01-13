@@ -9,7 +9,7 @@ from enum import Enum, auto
 from .print_util import json_term, color_term
 
 # TODO: remove pylint "disable" directives when pylint supports python 3.9 completely
-from typing import TypedDict, Optional, Union
+from typing import TypedDict, Optional, Union, List
 
 APPSTORE_URI_ROOT = "https://api.appstoreconnect.apple.com/v1"
 APPSTORE_AUDIENCE = "appstoreconnect-v1"
@@ -24,6 +24,12 @@ class FetchMethod(Enum):
     GET = auto()
     POST = auto()
     PATCH = auto()
+
+
+class Platform(Enum):
+    IOS = auto()
+    MAC_OS = auto()
+    TV_OS = auto()
 
 
 class VersionState(Enum):
@@ -55,6 +61,14 @@ editable_version_states = [
     VersionState.DEVELOPER_REJECTED,
 ]
 
+live_version_state = VersionState.READY_FOR_SALE
+
+PlatformList = List[Union[Platform, str]]  # pylint: disable=unsubscriptable-object
+
+VersionStateList = List[
+    Union[VersionState, str]  # pylint: disable=unsubscriptable-object
+]
+
 
 class VersionLocalizationAttributes(TypedDict):  # pylint: disable=inherit-non-class
     description: Optional[str]  # pylint: disable=unsubscriptable-object
@@ -80,8 +94,7 @@ def version_state_is_live(
 ) -> bool:
     """Test whether or not the version state is 'live' in the App Store."""
     return (
-        version_state == VersionState.READY_FOR_SALE
-        or version_state == VersionState.READY_FOR_SALE.name
+        version_state == live_version_state or version_state == live_version_state.name
     )
 
 
@@ -195,58 +208,81 @@ def get_bundle_id(
     return app["attributes"]["bundleId"]
 
 
+def create_version(
+    app_id: str,
+    platform: str,
+    version_string: str,
+    access_token: str,
+):
+    """Creates a new app version."""
+    return fetch(
+        path=f"/appStoreVersions/",
+        method=FetchMethod.POST,
+        access_token=access_token,
+        post_data={
+            "data": {
+                "attributes": {"platform": platform, "versionString": version_string},
+                "relationships": {"app": {"data": {"id": app_id, "type": "apps"}}},
+                "type": " appStoreVersions",
+            }
+        },
+    )["data"]
+
+
 def get_versions(
     app_id: str,
     access_token: str,
+    platforms: PlatformList = list(Platform),
+    states: VersionStateList = list(VersionState),
 ):
-    return fetch(
+    """Get the list of app versions, optionally filtering by platform and/or state."""
+    versions = fetch(
         path=f"/apps/{app_id}/appStoreVersions",
         method=FetchMethod.GET,
         access_token=access_token,
     )["data"]
 
+    platforms = [x.name if type(x) is Platform else x for x in platforms]
+    states = [x.name if type(x) is VersionState else x for x in states]
 
-def get_versions_in_state(
-    app_id: str,
-    version_state: VersionState,
-    access_token: str,
-):
-    app_store_versions = get_versions(app_id, access_token)
     return [
         v
-        for v in app_store_versions
-        if v["attributes"]["appStoreState"] == version_state.name
+        for v in versions
+        if v["attributes"]["platform"] in platforms
+        and v["attributes"]["appStoreState"] in states
     ]
 
 
 def get_versions_editable(
     app_id: str,
     access_token: str,
+    platforms: PlatformList = list(Platform),
 ):
-    app_store_versions = get_versions(app_id, access_token)
-    return [
-        v
-        for v in app_store_versions
-        if version_state_is_editable(v["attributes"]["appStoreState"])
-    ]
+    return get_versions(
+        app_id=app_id,
+        access_token=access_token,
+        platforms=platforms,
+        states=[s.name for s in editable_version_states],
+    )
 
 
 def get_version_live(
     app_id: str,
     access_token: str,
+    platforms: PlatformList = list(Platform),
 ):
-    versions_live = get_versions_in_state(
+    live_state = VersionState.READY_FOR_SALE.name
+    versions = get_versions(
         app_id=app_id,
-        version_state=VersionState.READY_FOR_SALE,
         access_token=access_token,
+        platforms=platforms,
+        states=[live_state],
     )
 
-    if len(versions_live) == 0:
-        raise ResourceNotFoundException(
-            f'No app version matching state "{VersionState.READY_FOR_SALE.name}"'
-        )
+    if len(versions) == 0:
+        raise ResourceNotFoundException(f'No app version matching state "{live_state}"')
     else:
-        return versions_live[0]
+        return versions[0]
 
 
 def get_version_localizations(

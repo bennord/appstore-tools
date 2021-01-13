@@ -1,5 +1,6 @@
 import colorama
 import modules.appstore_api as appstore
+import modules.command_line as command_line
 import sys
 import os
 import logging
@@ -81,97 +82,116 @@ def list_apps(args):
     print(json_term(apps_selected))
 
 
-def passes_version_filter(args, version) -> bool:
-    version_state = version["attributes"]["appStoreState"]
-    return (
-        not args.editable or appstore.version_state_is_editable(version_state)
-    ) and (not args.live or appstore.version_state_is_live(version_state))
-
-
 def list_versions(args):
     access_token = get_access_token(args)
     app_id = get_app_id(args, access_token)
+    platforms = command_line.create_platform_filter_list(args)
+    states = command_line.create_version_state_filter_list(args)
 
-    app_versions = appstore.get_versions(app_id=app_id, access_token=access_token)
-    app_versions_selected = [
+    versions = appstore.get_versions(
+        app_id=app_id, access_token=access_token, platforms=platforms, states=states
+    )
+    versions_selected = [
         {
             "id": v["id"],
+            "platform": v["attributes"]["platform"],
             "versionString": v["attributes"]["versionString"],
             "appStoreState": v["attributes"]["appStoreState"],
         }
-        for v in app_versions
-        if passes_version_filter(args, v)
+        for v in versions
     ]
-    print(json_term({"appId": app_id, "versions": app_versions_selected}))
+    print(json_term({"appId": app_id, "versions": versions_selected}))
 
 
 def list_screenshots(args):
     access_token = get_access_token(args)
     app_id = get_app_id(args, access_token)
+    platforms = command_line.create_platform_filter_list(args)
+    states = command_line.create_version_state_filter_list(args)
 
     logging.info(color_term(colorama.Fore.GREEN + "app_id: ") + str(app_id))
 
-    live_id = appstore.get_version_live(app_id=app_id, access_token=access_token)["id"]
-    logging.info(color_term(colorama.Fore.GREEN + "app_live_id: ") + str(live_id))
-
-    localizations = appstore.get_version_localizations(
-        version_id=live_id, access_token=access_token
+    versions = appstore.get_versions(
+        app_id=app_id, access_token=access_token, platforms=platforms, states=states
     )
-
-    localization_ids = (l["id"] for l in localizations)
-    for loc_id in localization_ids:
-        screenshot_sets = appstore.get_screenshot_sets(
-            localization_id=loc_id, access_token=access_token
-        )
+    for version in versions:
+        version_id = version["id"]
+        version_state = version["attributes"]["appStoreState"]
         print(
-            color_term(colorama.Fore.GREEN + f"loc_id {loc_id}: ")
-            + f"Found {colorama.Fore.CYAN}{len(screenshot_sets)}{colorama.Fore.RESET} screenshot sets."
+            color_term(
+                f"{colorama.Fore.GREEN}version: {colorama.Fore.BLUE}{version_id} {version_state}"
+            )
         )
 
-        for screenshot_set in screenshot_sets:
-            ss_set_id = screenshot_set["id"]
-            ss_display_type = screenshot_set["attributes"]["screenshotDisplayType"]
-            screenshots = appstore.get_screenshots(
-                screenshot_set_id=ss_set_id, access_token=access_token
+        localizations = appstore.get_version_localizations(
+            version_id=version_id, access_token=access_token
+        )
+
+        localization_ids = (l["id"] for l in localizations)
+        for loc_id in localization_ids:
+            screenshot_sets = appstore.get_screenshot_sets(
+                localization_id=loc_id, access_token=access_token
             )
             print(
-                color_term(colorama.Fore.GREEN + f"screenshotDisplayType: ")
-                + ss_display_type
+                color_term(colorama.Fore.GREEN + f"loc_id {loc_id}: ")
+                + f"Found {colorama.Fore.CYAN}{len(screenshot_sets)}{colorama.Fore.RESET} screenshot sets."
             )
-            print(json_term(screenshots))
+
+            for screenshot_set in screenshot_sets:
+                ss_set_id = screenshot_set["id"]
+                ss_display_type = screenshot_set["attributes"]["screenshotDisplayType"]
+                screenshots = appstore.get_screenshots(
+                    screenshot_set_id=ss_set_id, access_token=access_token
+                )
+                print(
+                    color_term(colorama.Fore.GREEN + f"screenshotDisplayType: ")
+                    + ss_display_type
+                )
+                print(json_term(screenshots))
 
 
 def list_previews(args):
     access_token = get_access_token(args)
     app_id = get_app_id(args, access_token)
+    platforms = command_line.create_platform_filter_list(args)
+    states = command_line.create_version_state_filter_list(args)
 
     logging.info(color_term(colorama.Fore.GREEN + "app_id: ") + str(app_id))
 
-    live_id = appstore.get_version_live(app_id=app_id, access_token=access_token)["id"]
-    logging.info(color_term(colorama.Fore.GREEN + "app_live_id: ") + str(live_id))
-
-    localizations = appstore.get_version_localizations(
-        version_id=live_id, access_token=access_token
+    versions = appstore.get_versions(
+        app_id=app_id, access_token=access_token, platforms=platforms, states=states
     )
-
-    localization_ids = (l["id"] for l in localizations)
-    for loc_id in localization_ids:
-        preview_sets = appstore.get_preview_sets(
-            localization_id=loc_id, access_token=access_token
-        )
+    for version in versions:
+        version_id = version["id"]
+        version_state = version["attributes"]["appStoreState"]
         print(
-            color_term(colorama.Fore.GREEN + f"loc_id {loc_id}: ")
-            + f"Found {colorama.Fore.CYAN}{len(preview_sets)}{colorama.Fore.RESET} preview sets."
+            color_term(
+                f"{colorama.Fore.GREEN}version: {colorama.Fore.BLUE}{version_id} {version_state}"
+            )
         )
 
-        for preview_set in preview_sets:
-            preview_set_id = preview_set["id"]
-            preview_type = preview_set["attributes"]["previewType"]
-            preview_set = appstore.get_previews(
-                preview_set_id=preview_set_id, access_token=access_token
+        localizations = appstore.get_version_localizations(
+            version_id=version_id, access_token=access_token
+        )
+
+        localization_ids = (l["id"] for l in localizations)
+        for loc_id in localization_ids:
+            preview_sets = appstore.get_preview_sets(
+                localization_id=loc_id, access_token=access_token
             )
-            print(color_term(colorama.Fore.GREEN + f"previewType: ") + preview_type)
-            print(json_term(preview_set))
+            print(
+                color_term(colorama.Fore.GREEN + f"loc_id {loc_id}: ")
+                + f"Found {colorama.Fore.CYAN}{len(preview_sets)}{colorama.Fore.RESET} preview sets."
+            )
+
+            for preview_set in preview_sets:
+                preview_set_id = preview_set["id"]
+                preview_type = preview_set["attributes"]["previewType"]
+                preview_set = appstore.get_previews(
+                    preview_set_id=preview_set_id, access_token=access_token
+                )
+                print(color_term(colorama.Fore.GREEN + f"previewType: ") + preview_type)
+                print(json_term(preview_set))
 
 
 def download_assets(args):
@@ -196,37 +216,44 @@ def download_assets(args):
         )
         return
 
-    # Get all versions
-    versions = appstore.get_versions(app_id=app_id, access_token=access_token)
+    # Get versions
+    platforms = [args.platform]
+    version_states = (
+        [args.version_state]
+        if args.version_state is not None
+        else list(appstore.VersionState)
+    )
+    versions = appstore.get_versions(
+        app_id=app_id,
+        access_token=access_token,
+        platforms=platforms,
+        states=version_states,
+    )
     if len(versions) == 0:
-        print("No app versions found on the app store.")
-        return
-
-    # Filter versions
-    if args.version_state is not None:
-        versions = [
-            v
-            for v in versions
-            if v["attributes"]["appStoreState"] == args.version_state
-        ]
-        if len(versions) == 0:
-            print(
-                color_term(
-                    f"No app versions found matching version-state "
-                    + f"{colorama.Fore.BLUE}{args.version_state}{colorama.Fore.RESET}."
-                )
+        message = (
+            "No app version found: "
+            + "platform "
+            + f"{colorama.Fore.BLUE}{args.platform}{colorama.Fore.RESET}"
+        )
+        if args.version_state is not None:
+            message += (
+                ", version-state "
+                + f"{colorama.Fore.BLUE}{args.version_state}{colorama.Fore.RESET}"
             )
-            return
+        print(color_term(message))
+        return
 
     version = versions[0]
     version_id = version["id"]
     version_state = version["attributes"]["appStoreState"]
+    version_platform = version["attributes"]["platform"]
 
     print(
         color_term(
             f"{colorama.Fore.GREEN}Downloading app version: "
             + f"{colorama.Fore.MAGENTA}{bundle_id}{colorama.Fore.RESET} "
             + f"(app_id: {colorama.Fore.BLUE}{app_id}{colorama.Fore.RESET}, "
+            + f"platform: {colorama.Fore.BLUE}{version_platform}{colorama.Fore.RESET}, "
             + f"version_id: {colorama.Fore.BLUE}{version_id}{colorama.Fore.RESET}, "
             + f"version_state: {colorama.Fore.BLUE}{version_state}{colorama.Fore.RESET})"
         )
@@ -335,6 +362,8 @@ def publish_assets(args):
     app_id = get_app_id(args, access_token)
     bundle_id = get_bundle_id(args, access_token)
     asset_dir = args.asset_dir
+    platform = args.platform
+    version_string = args.version_string
 
     print(
         color_term(
@@ -351,10 +380,31 @@ def publish_assets(args):
         print(color_term(colorama.Fore.RED + "No app directory found: ") + app_dir)
         return
 
-    versions = appstore.get_versions_editable(app_id=app_id, access_token=access_token)
-    print(
-        f"Found {colorama.Fore.CYAN}{len(versions)}{colorama.Fore.RESET} editable app versions."
+    # Get Versions
+    versions = appstore.get_versions(
+        app_id=app_id,
+        access_token=access_token,
+        platforms=[platform],
+        states=appstore.editable_version_states,
     )
+    print(
+        color_term(
+            f"Found {colorama.Fore.CYAN}{len(versions)}{colorama.Fore.RESET} editable app versions "
+            + f"for {colorama.Fore.CYAN}{platform}{colorama.Fore.RESET}."
+        )
+    )
+
+    if len(versions) == 0:
+        print(
+            f"Creating new version: {colorama.Fore.BLUE}{version_string}{colorama.Fore.RESET}"
+        )
+        created_version = appstore.create_version(
+            app_id=app_id,
+            platform=platform,
+            version_string=version_string,
+            access_token=access_token,
+        )
+        versions.append(created_version)
 
     for v in versions:
         version_id = v["id"]

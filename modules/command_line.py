@@ -122,6 +122,77 @@ def add_log_level_argument(parser: configargparse.ArgumentParser):
     )
 
 
+def add_platform_argument(parser: configargparse.ArgumentParser):
+    parser.add_argument(
+        "--platform",
+        choices=list(x.name for x in appstore.Platform),
+        default=appstore.Platform.IOS.name,
+        metavar="PLATFORM",
+        help="Specify the target platform.",
+    )
+
+
+def add_platform_filter_argument(parser: configargparse.ArgumentParser):
+    parser.add_argument(
+        "--platform",
+        choices=list(x.name for x in appstore.Platform),
+        metavar="PLATFORM",
+        help="Filter by target platform.",
+    )
+
+
+def add_editable_filter_argument(parser: configargparse.ArgumentParser):
+    parser.add_argument(
+        "--editable",
+        action="store_true",
+        help='Filter for versions in an "editable" state.'
+        + clr_extra(
+            " (details here https://help.apple.com/app-store-connect/#/dev18557d60e)"
+        ),
+    )
+
+
+def add_live_filter_argument(parser: configargparse.ArgumentParser):
+    parser.add_argument(
+        "--live", action="store_true", help='Filter for versions in an "live" state.'
+    )
+
+
+def add_version_state_filter_argument(parser: configargparse.ArgumentParser):
+    parser.add_argument(
+        "--version-state",
+        choices=list(x.name for x in appstore.VersionState),
+        metavar="VERSION_STATE",
+        help="Filter by appstore version state.",
+    )
+
+
+def add_filters_group(parser: configargparse.ArgumentParser):
+    filter_group = parser.add_argument_group(
+        title="Result filters",
+    )
+    add_platform_filter_argument(filter_group)
+    add_editable_filter_argument(filter_group)
+    add_live_filter_argument(filter_group)
+    add_version_state_filter_argument(filter_group)
+
+
+def create_platform_filter_list(args):
+    return [args.platform] if args.platform is not None else list(appstore.Platform)
+
+
+def create_version_state_filter_list(args):
+    return (
+        appstore.editable_version_states
+        if args.editable
+        else appstore.live_version_state
+        if args.live
+        else [args.version_state]
+        if args.version_state is not None
+        else list(appstore.VersionState)
+    )
+
+
 def add_global_group(parser: configargparse.ArgumentParser):
     global_group = parser.add_argument_group(
         title="General",
@@ -225,20 +296,7 @@ def run_command_line():
         "versions",
         help="Lists all app versions.",
     )
-    versions_group = versions_parser.add_argument_group(
-        title="Versions",
-    )
-    versions_group.add_argument(
-        "--editable",
-        action="store_true",
-        help='Filters for versions in an "editable" state.'
-        + clr_extra(
-            " (details here https://help.apple.com/app-store-connect/#/dev18557d60e)"
-        ),
-    )
-    versions_group.add_argument(
-        "--live", action="store_true", help='Filters for versions in an "live" state.'
-    )
+    add_filters_group(versions_parser)
     add_authentication_group(versions_parser)
     add_app_id_group(versions_parser)
 
@@ -248,6 +306,7 @@ def run_command_line():
         "screenshots",
         help="Lists the screenshots for an app.",
     )
+    add_filters_group(screenshots_parser)
     add_authentication_group(screenshots_parser)
     add_app_id_group(screenshots_parser)
 
@@ -257,6 +316,7 @@ def run_command_line():
         "previews",
         help="Lists the previews for an app.",
     )
+    add_filters_group(previews_parser)
     add_authentication_group(previews_parser)
     add_app_id_group(previews_parser)
 
@@ -270,6 +330,7 @@ def run_command_line():
         title="Download",
     )
     add_asset_dir_argument(download_group)
+    add_platform_argument(download_group)
     download_group.add_argument(
         "--overwrite",
         action="store_true",
@@ -295,6 +356,12 @@ def run_command_line():
         title="Publish",
     )
     add_asset_dir_argument(publish_group)
+    add_platform_argument(publish_group)
+    publish_group.add_argument(
+        "--version-string",
+        default="APPSTORE.TOOLS",
+        help="Specify the version string to use in the app version.",
+    )
     add_authentication_group(publish_parser)
     add_app_id_group(publish_parser)
 
