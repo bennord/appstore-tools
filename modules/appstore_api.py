@@ -9,7 +9,7 @@ from enum import Enum, auto
 from .print_util import json_term, color_term
 
 # TODO: remove pylint "disable" directives when pylint supports python 3.9 completely
-from typing import TypedDict, Optional
+from typing import TypedDict, Optional, Union
 
 APPSTORE_URI_ROOT = "https://api.appstoreconnect.apple.com/v1"
 APPSTORE_AUDIENCE = "appstoreconnect-v1"
@@ -65,12 +65,24 @@ class VersionLocalizationData(TypedDict):  # pylint: disable=inherit-non-class
     whatsNew: Optional[str]  # pylint: disable=unsubscriptable-object
 
 
-def version_state_is_editable(version_state: VersionState) -> bool:
-    return version_state in editable_version_states
+def version_state_is_editable(
+    version_state: Union[VersionState, str]  # pylint: disable=unsubscriptable-object
+) -> bool:
+    """Test whether or not the version state is 'editable' in the App Store."""
+    if type(version_state) is VersionState:
+        return version_state in editable_version_states
+    else:
+        return version_state in (x.name for x in editable_version_states)
 
 
-def version_state_is_live(version_state: VersionState) -> bool:
-    return version_state == VersionState.READY_FOR_SALE
+def version_state_is_live(
+    version_state: Union[VersionState, str]  # pylint: disable=unsubscriptable-object
+) -> bool:
+    """Test whether or not the version state is 'live' in the App Store."""
+    return (
+        version_state == VersionState.READY_FOR_SALE
+        or version_state == VersionState.READY_FOR_SALE.name
+    )
 
 
 def create_access_token(issuer_id: str, key_id: str, key: str) -> str:
