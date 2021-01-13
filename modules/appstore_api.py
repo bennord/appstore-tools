@@ -56,7 +56,7 @@ editable_version_states = [
 ]
 
 
-class VersionLocalizationData(TypedDict):  # pylint: disable=inherit-non-class
+class VersionLocalizationAttributes(TypedDict):  # pylint: disable=inherit-non-class
     description: Optional[str]  # pylint: disable=unsubscriptable-object
     keywords: Optional[str]  # pylint: disable=unsubscriptable-object
     marketingUrl: Optional[str]  # pylint: disable=unsubscriptable-object
@@ -109,6 +109,14 @@ def fetch(path: str, method: FetchMethod, access_token: str, post_data=None):
 
     url = APPSTORE_URI_ROOT + path if path.startswith("/") else path
 
+    logging.debug(
+        color_term(
+            f"{colorama.Fore.GREEN}appstore_api.fetch: {method.name} {colorama.Fore.MAGENTA}{url}\n"
+        )
+        + color_term(f"{colorama.Fore.BLUE}request body:\n")
+        + json_term(post_data)
+    )
+
     if method == FetchMethod.GET:
         response = requests.get(url, headers=headers)
     elif method == FetchMethod.POST:
@@ -117,13 +125,6 @@ def fetch(path: str, method: FetchMethod, access_token: str, post_data=None):
     elif method == FetchMethod.PATCH:
         headers["Content-Type"] = "application/json"
         response = requests.patch(url=url, headers=headers, data=json.dumps(post_data))
-
-    if response.status_code == 404:
-        raise ResourceNotFoundException(
-            f"Resource not found at {url} (HttpError {404})"
-        )
-
-    response.raise_for_status()
 
     content_type = response.headers["content-type"]
 
@@ -142,11 +143,16 @@ def fetch(path: str, method: FetchMethod, access_token: str, post_data=None):
         result = response
 
     logging.debug(
-        color_term(
-            f"{colorama.Fore.GREEN}appstore_api.fetch: {colorama.Fore.MAGENTA}{url}\n"
-        )
-        + json_term(result)
+        color_term(f"{colorama.Fore.BLUE}response body:\n") + json_term(result)
     )
+
+    # raise exceptions for easier handling
+    if response.status_code == 404:
+        raise ResourceNotFoundException(
+            f"Resource not found at {url} (HttpError {404})"
+        )
+    response.raise_for_status()
+
     return result
 
 
@@ -256,17 +262,23 @@ def get_version_localizations(
 
 def update_version_localization(
     localization_id: str,
-    localization_data: VersionLocalizationData,
+    localization_attributes: VersionLocalizationAttributes,
     access_token: str,
 ):
     """Updates the meta data for the specified App Version Localization.
     Some data fields require the App Version to be in an editable state."""
-    fetch(
+    return fetch(
         path=f"/appStoreVersionLocalizations/{localization_id}",
         method=FetchMethod.PATCH,
         access_token=access_token,
-        post_data=localization_data,
-    )
+        post_data={
+            "data": {
+                "id": localization_id,
+                "attributes": localization_attributes,
+                "type": "appStoreVersionLocalizations",
+            }
+        },
+    )["data"]
 
 
 def get_screenshot_sets(

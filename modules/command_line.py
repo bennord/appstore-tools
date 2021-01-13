@@ -236,6 +236,9 @@ def run_command_line():
             " (details here https://help.apple.com/app-store-connect/#/dev18557d60e)"
         ),
     )
+    versions_group.add_argument(
+        "--live", action="store_true", help='Filters for versions in an "live" state.'
+    )
     add_authentication_group(versions_parser)
     add_app_id_group(versions_parser)
 

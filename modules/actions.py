@@ -79,9 +79,10 @@ def list_apps(args):
 
 
 def passes_version_filter(args, version) -> bool:
-    return not args.editable or appstore.version_state_is_editable(
-        version["attributes"]["appStoreState"]
-    )
+    version_state = version["attributes"]["appStoreState"]
+    return (
+        not args.editable or appstore.version_state_is_editable(version_state)
+    ) and (not args.live or appstore.version_state_is_live(version_state))
 
 
 def list_versions(args):
@@ -218,7 +219,7 @@ def download_assets(args):
         # Locale directory
         os.makedirs(name=loc_dir, exist_ok=True)
 
-        for key in appstore.VersionLocalizationData.__annotations__.keys():
+        for key in appstore.VersionLocalizationAttributes.__annotations__.keys():
             content = loc_attr[key] if loc_attr[key] is not None else ""
             write_txt_file(
                 path=os.path.join(loc_dir, key + ".txt"),
@@ -344,13 +345,13 @@ def publish_assets(args):
                 continue
 
             # Normalize all attribute values to strings
-            for key in appstore.VersionLocalizationData.__annotations__.keys():
+            for key in appstore.VersionLocalizationAttributes.__annotations__.keys():
                 if loc_attr[key] is None:
                     loc_attr[key] = ""
 
             # Load local data from disk
-            file_loc_data: appstore.VersionLocalizationData = {}
-            for key in appstore.VersionLocalizationData.__annotations__.keys():
+            file_loc_data: appstore.VersionLocalizationAttributes = {}
+            for key in appstore.VersionLocalizationAttributes.__annotations__.keys():
                 path = os.path.join(loc_dir, key + ".txt")
                 file_loc_data[key] = read_txt_file(path)
 
@@ -367,7 +368,7 @@ def publish_assets(args):
                 appstore.update_version_localization(
                     localization_id=loc_id,
                     access_token=access_token,
-                    localization_data=file_loc_data,
+                    localization_attributes=file_loc_data,
                 )
             else:
                 print(
