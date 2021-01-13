@@ -5,6 +5,7 @@ import os
 import logging
 import requests
 from modules.print_util import color_term, json_term
+from typing import Union
 
 
 def get_access_token(args):
@@ -54,12 +55,14 @@ def write_txt_file(path: str, content: str) -> None:
         file.write(content)
 
 
-def read_txt_file(path: str) -> str:
+def read_txt_file(
+    path: str,
+) -> Union[str, None]:  # pylint: disable=unsubscriptable-object
     try:
         with open(file=path, mode="r") as file:
             return file.read()
     except FileNotFoundError:
-        return ""
+        return None
 
 
 def list_apps(args):
@@ -354,9 +357,14 @@ def publish_assets(args):
             for key in appstore.VersionLocalizationAttributes.__annotations__.keys():
                 path = os.path.join(loc_dir, key + ".txt")
                 file_loc_data[key] = read_txt_file(path)
+                if file_loc_data[key] is None:
+                    del file_loc_data[key]
 
             # Only need to update if there are differences
-            if any(file_loc_data[key] != loc_attr[key] for key in file_loc_data.keys()):
+            if any(
+                file_loc_data[key] is not None and file_loc_data[key] != loc_attr[key]
+                for key in file_loc_data.keys()
+            ):
                 print(
                     color_term(colorama.Fore.GREEN + "Version ")
                     + color_term(colorama.Fore.BLUE + str(version_state))
