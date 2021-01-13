@@ -179,20 +179,44 @@ def download_assets(args):
     app_id = get_app_id(args, access_token)
     bundle_id = get_bundle_id(args, access_token)
     asset_dir = args.asset_dir
+    app_dir = os.path.join(asset_dir, bundle_id)
 
     print(
         color_term(
             colorama.Fore.GREEN
-            + "Downloading assets to local dir: "
-            + colorama.Fore.MAGENTA
-            + asset_dir
+            + "Using local app directory: "
+            + colorama.Fore.BLUE
+            + app_dir
         )
     )
 
+    if os.path.isdir(app_dir) and not args.overwrite:
+        print(
+            f"App directory already exists. Specify '--overwrite' if you wish to force downloading to an existing directory."
+        )
+        return
+
+    # Get all versions
     versions = appstore.get_versions(app_id=app_id, access_token=access_token)
     if len(versions) == 0:
-        print("No app versions found on the app store... exiting.")
+        print("No app versions found on the app store.")
         return
+
+    # Filter versions
+    if args.version_state is not None:
+        versions = [
+            v
+            for v in versions
+            if v["attributes"]["appStoreState"] == args.version_state
+        ]
+        if len(versions) == 0:
+            print(
+                color_term(
+                    f"No app versions found matching version-state "
+                    + f"{colorama.Fore.BLUE}{args.version_state}{colorama.Fore.RESET}."
+                )
+            )
+            return
 
     version = versions[0]
     version_id = version["id"]
@@ -207,15 +231,6 @@ def download_assets(args):
             + f"version_state: {colorama.Fore.BLUE}{version_state}{colorama.Fore.RESET})"
         )
     )
-
-    app_dir = os.path.join(asset_dir, bundle_id)
-    if os.path.isdir(app_dir) and not args.overwrite:
-        print(
-            color_term(
-                f"App directory {colorama.Fore.BLUE}{app_dir}{colorama.Fore.RESET} already exists... exiting."
-            )
-        )
-        return
 
     localizations = appstore.get_version_localizations(
         version_id=version_id, access_token=access_token

@@ -275,6 +275,13 @@ def run_command_line():
         action="store_true",
         help="Allows downloading into an existing app directory and potentially overwriting existing files.",
     )
+    download_group.add_argument(
+        "--version-state",
+        choices=list(x.name for x in appstore.VersionState),
+        metavar="VERSION_STATE",
+        help="Specify the required appstore version state.  The first matching version will be downloaded. "
+        + "By default, the first version listed by the app store is used.",
+    )
     add_authentication_group(download_parser)
     add_app_id_group(download_parser)
 
