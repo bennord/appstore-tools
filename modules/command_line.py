@@ -266,9 +266,17 @@ def run_command_line():
         "download",
         help="Download all assets for an app.",
     )
+    download_group = download_parser.add_argument_group(
+        title="Download",
+    )
+    add_asset_dir_argument(download_group)
+    download_group.add_argument(
+        "--overwrite",
+        action="store_true",
+        help="Allows downloading into an existing app directory and potentially overwriting existing files.",
+    )
     add_authentication_group(download_parser)
     add_app_id_group(download_parser)
-    add_asset_dir_argument(download_parser)
 
     # Action: publish
     publish_parser = add_subparser(
@@ -276,9 +284,12 @@ def run_command_line():
         "publish",
         help="Publish all assets for an app.",
     )
+    publish_group = publish_parser.add_argument_group(
+        title="Publish",
+    )
+    add_asset_dir_argument(publish_group)
     add_authentication_group(publish_parser)
     add_app_id_group(publish_parser)
-    add_asset_dir_argument(publish_parser)
 
     # Parse
     parsed_args = global_parser.parse_known_args()

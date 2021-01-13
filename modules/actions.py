@@ -189,26 +189,43 @@ def download_assets(args):
         )
     )
 
-    live_id = appstore.get_version_live(app_id=app_id, access_token=access_token)["id"]
+    versions = appstore.get_versions(app_id=app_id, access_token=access_token)
+    if len(versions) == 0:
+        print("No app versions found on the app store... exiting.")
+        return
+
+    version = versions[0]
+    version_id = version["id"]
+    version_state = version["attributes"]["appStoreState"]
 
     print(
         color_term(
-            f"{colorama.Fore.GREEN}App: "
+            f"{colorama.Fore.GREEN}Downloading app version: "
             + f"{colorama.Fore.MAGENTA}{bundle_id}{colorama.Fore.RESET} "
             + f"(app_id: {colorama.Fore.BLUE}{app_id}{colorama.Fore.RESET}, "
-            + f"version_id [Live]: {colorama.Fore.BLUE}{live_id}{colorama.Fore.RESET})"
+            + f"version_id: {colorama.Fore.BLUE}{version_id}{colorama.Fore.RESET}, "
+            + f"version_state: {colorama.Fore.BLUE}{version_state}{colorama.Fore.RESET})"
         )
     )
 
+    app_dir = os.path.join(asset_dir, bundle_id)
+    if os.path.isdir(app_dir) and not args.overwrite:
+        print(
+            color_term(
+                f"App directory {colorama.Fore.BLUE}{app_dir}{colorama.Fore.RESET} already exists... exiting."
+            )
+        )
+        return
+
     localizations = appstore.get_version_localizations(
-        version_id=live_id, access_token=access_token
+        version_id=version_id, access_token=access_token
     )
 
     for loc in localizations:
         loc_id = loc["id"]
         loc_attr = loc["attributes"]
         locale = loc_attr["locale"]
-        loc_dir = os.path.join(asset_dir, bundle_id, locale)
+        loc_dir = os.path.join(app_dir, locale)
 
         print(
             color_term(
