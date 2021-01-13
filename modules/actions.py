@@ -78,6 +78,12 @@ def list_apps(args):
     print(json_term(apps_selected))
 
 
+def passes_version_filter(args, version) -> bool:
+    return not args.editable or appstore.version_state_is_editable(
+        version["attributes"]["appStoreState"]
+    )
+
+
 def list_versions(args):
     access_token = get_access_token(args)
     app_id = get_app_id(args, access_token)
@@ -90,6 +96,7 @@ def list_versions(args):
             "appStoreState": v["attributes"]["appStoreState"],
         }
         for v in app_versions
+        if passes_version_filter(args, v)
     ]
     print(json_term({"appId": app_id, "versions": app_versions_selected}))
 

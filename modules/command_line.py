@@ -8,6 +8,7 @@ import sys
 from modules.print_util import color_term
 import colorama
 import argparse_color_formatter
+import modules.version as version
 
 DEFAULT_CONFIG_FILES = ["run.config"]
 DEFAULT_ASSET_DIR = "appstore"
@@ -84,9 +85,17 @@ def add_config_argument(parser: configargparse.ArgumentParser):
         is_config_file=True,
         help="Args that start with '--' (eg. --log-level) can also be set in a config file (run.config or specified via -c). "
         + "Config file syntax allows: key=value, flag=true, stuff=[a,b,c] "
-        + clr_extra("(for details, see syntax at https://goo.gl/R74nmi)")
+        + clr_extra("(details here https://goo.gl/R74nmi)")
         + ". "
         + "If an arg is specified in more than one place, then commandline values override config file values which override defaults.",
+    )
+
+
+def add_version_argument(parser: configargparse.ArgumentParser):
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=version.version,
     )
 
 
@@ -115,9 +124,10 @@ def add_log_level_argument(parser: configargparse.ArgumentParser):
 
 def add_global_group(parser: configargparse.ArgumentParser):
     global_group = parser.add_argument_group(
-        title="General options",
+        title="General",
     )
     add_help_argument(global_group)
+    add_version_argument(global_group)
     add_config_argument(global_group)
     add_log_level_argument(global_group)
 
@@ -214,6 +224,17 @@ def run_command_line():
         action_subparsers,
         "versions",
         help="Lists all app versions.",
+    )
+    versions_group = versions_parser.add_argument_group(
+        title="Versions",
+    )
+    versions_group.add_argument(
+        "--editable",
+        action="store_true",
+        help='Filters for versions in an "editable" state.'
+        + clr_extra(
+            " (details here https://help.apple.com/app-store-connect/#/dev18557d60e)"
+        ),
     )
     add_authentication_group(versions_parser)
     add_app_id_group(versions_parser)
