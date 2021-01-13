@@ -78,6 +78,15 @@ class PrettyHelpFormatter(argparse_color_formatter.ColorRawDescriptionHelpFormat
         return action_text.replace(action_invocation, action_invocation_colored, 1)
 
 
+def arg_type_positive_int(arg):
+    i = int(arg)
+    if i < 1:
+        raise configargparse.ArgumentTypeError(
+            f"{arg} is an invalid positive int value"
+        )
+    return i
+
+
 def add_config_argument(parser: configargparse.ArgumentParser):
     parser.add_argument(
         "-c",
@@ -306,6 +315,25 @@ def run_command_line():
         "screenshots",
         help="Lists the screenshots for an app.",
     )
+    screenshots_group = screenshots_parser.add_argument_group(
+        title="Screenshots",
+    )
+    screenshots_group.add_argument(
+        "--long",
+        action="store_true",
+        help="Print out more information.",
+    )
+    screenshots_group.add_argument(
+        "--full",
+        action="store_true",
+        help="Print out full information.",
+    )
+    screenshots_group.add_argument(
+        "--version-limit",
+        type=arg_type_positive_int,
+        default=1,
+        help="Limit the number of app versions displayed.",
+    )
     add_filters_group(screenshots_parser)
     add_authentication_group(screenshots_parser)
     add_app_id_group(screenshots_parser)
@@ -315,6 +343,25 @@ def run_command_line():
         action_subparsers,
         "previews",
         help="Lists the previews for an app.",
+    )
+    previews_group = previews_parser.add_argument_group(
+        title="Previews",
+    )
+    previews_group.add_argument(
+        "--long",
+        action="store_true",
+        help="Print out more information.",
+    )
+    previews_group.add_argument(
+        "--full",
+        action="store_true",
+        help="Print out full information.",
+    )
+    previews_group.add_argument(
+        "--version-limit",
+        type=arg_type_positive_int,
+        default=1,
+        help="Limit the number of app versions displayed.",
     )
     add_filters_group(previews_parser)
     add_authentication_group(previews_parser)
@@ -400,6 +447,8 @@ def run_command_line():
     except requests.exceptions.HTTPError as error:
         sys.exit(error)
     except appstore.ResourceNotFoundException as error:
+        sys.exit(error)
+    except KeyboardInterrupt as error:
         sys.exit(error)
 
     return parsed_args

@@ -93,12 +93,12 @@ def list_versions(args):
     )
     versions_selected = [
         {
-            "id": v["id"],
-            "platform": v["attributes"]["platform"],
-            "versionString": v["attributes"]["versionString"],
-            "appStoreState": v["attributes"]["appStoreState"],
+            "id": x["id"],
+            "platform": x["attributes"]["platform"],
+            "versionString": x["attributes"]["versionString"],
+            "appStoreState": x["attributes"]["appStoreState"],
         }
-        for v in versions
+        for x in versions
     ]
     print(json_term({"appId": app_id, "versions": versions_selected}))
 
@@ -114,7 +114,7 @@ def list_screenshots(args):
     versions = appstore.get_versions(
         app_id=app_id, access_token=access_token, platforms=platforms, states=states
     )
-    for version in versions:
+    for version in versions[: args.version_limit]:
         version_id = version["id"]
         version_state = version["attributes"]["appStoreState"]
         print(
@@ -143,11 +143,32 @@ def list_screenshots(args):
                 screenshots = appstore.get_screenshots(
                     screenshot_set_id=ss_set_id, access_token=access_token
                 )
-                print(
-                    color_term(colorama.Fore.GREEN + f"screenshotDisplayType: ")
-                    + ss_display_type
+                screenshots = (
+                    screenshots
+                    if args.full
+                    else [
+                        {
+                            "id": x["id"],
+                            "fileSize": x["attributes"]["fileSize"],
+                            "fileName": x["attributes"]["fileName"],
+                            "sourceFileChecksum": x["attributes"]["sourceFileChecksum"],
+                            "templateUrl": x["attributes"]["imageAsset"]["templateUrl"],
+                            "width": x["attributes"]["imageAsset"]["width"],
+                            "height": x["attributes"]["imageAsset"]["height"],
+                        }
+                        for x in screenshots
+                    ]
+                    if args.long
+                    else [x["attributes"]["fileName"] for x in screenshots]
                 )
-                print(json_term(screenshots))
+                print(
+                    json_term(
+                        {
+                            "screenshotDisplayType": ss_display_type,
+                            "screenshots": screenshots,
+                        }
+                    )
+                )
 
 
 def list_previews(args):
@@ -161,7 +182,7 @@ def list_previews(args):
     versions = appstore.get_versions(
         app_id=app_id, access_token=access_token, platforms=platforms, states=states
     )
-    for version in versions:
+    for version in versions[: args.version_limit]:
         version_id = version["id"]
         version_state = version["attributes"]["appStoreState"]
         print(
