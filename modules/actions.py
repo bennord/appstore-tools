@@ -79,9 +79,6 @@ def list_apps(args):
 
 
 def passes_version_filter(args, version) -> bool:
-    print(
-        f'Version state: {version["attributes"]["appStoreState"]}, editable: {appstore.version_state_is_editable(version["attributes"]["appStoreState"])}'
-    )
     return not args.editable or appstore.version_state_is_editable(
         version["attributes"]["appStoreState"]
     )
