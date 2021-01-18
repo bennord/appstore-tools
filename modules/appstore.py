@@ -140,7 +140,7 @@ def fetch(path: str, method: FetchMethod, access_token: str, post_data=None):
 
     logging.debug(
         color_term(
-            f"{colorama.Fore.GREEN}appstore_api.fetch: {method.name} {colorama.Fore.MAGENTA}{url}\n"
+            f"{colorama.Fore.GREEN}appstore.fetch: {method.name} {colorama.Fore.MAGENTA}{url}\n"
         )
         + color_term(f"{colorama.Fore.BLUE}request body:\n")
         + json_term(post_data)

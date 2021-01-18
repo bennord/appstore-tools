@@ -1,8 +1,9 @@
 import configargparse
 import argparse
 import logging
+import modules.command_line_actions as command_line_actions
+import modules.appstore as appstore
 import modules.actions as actions
-import modules.appstore_api as appstore
 import requests
 import sys
 from modules.print_util import color_term
@@ -211,6 +212,24 @@ def create_version_state_filter_list(args):
     )
 
 
+def add_verbosity_arguments(parser: configargparse.ArgumentParser):
+    parser.add_argument(
+        "--long",
+        action="store_const",
+        default=actions.Verbosity.SHORT,
+        const=actions.Verbosity.LONG,
+        dest="verbosity",
+        help="Print out more information.",
+    )
+    parser.add_argument(
+        "--full",
+        action="store_const",
+        const=actions.Verbosity.FULL,
+        dest="verbosity",
+        help="Print out full information.",
+    )
+
+
 def add_global_group(parser: configargparse.ArgumentParser):
     global_group = parser.add_argument_group(
         title="General",
@@ -324,6 +343,10 @@ def run_command_line():
         "versions",
         help="Lists all app versions.",
     )
+    versions_group = versions_parser.add_argument_group(
+        title="Versions",
+    )
+    add_verbosity_arguments(versions_group)
     add_version_filters_group(versions_parser)
     add_authentication_group(versions_parser)
     add_app_id_group(versions_parser)
@@ -337,16 +360,7 @@ def run_command_line():
     screenshots_group = screenshots_parser.add_argument_group(
         title="Screenshots",
     )
-    screenshots_group.add_argument(
-        "--long",
-        action="store_true",
-        help="Print out more information.",
-    )
-    screenshots_group.add_argument(
-        "--full",
-        action="store_true",
-        help="Print out full information.",
-    )
+    add_verbosity_arguments(screenshots_group)
     screenshots_group.add_argument(
         "--version-limit",
         type=arg_type_positive_int,
@@ -366,16 +380,7 @@ def run_command_line():
     previews_group = previews_parser.add_argument_group(
         title="Previews",
     )
-    previews_group.add_argument(
-        "--long",
-        action="store_true",
-        help="Print out more information.",
-    )
-    previews_group.add_argument(
-        "--full",
-        action="store_true",
-        help="Print out full information.",
-    )
+    add_verbosity_arguments(previews_group)
     previews_group.add_argument(
         "--version-limit",
         type=arg_type_positive_int,
@@ -448,19 +453,19 @@ def run_command_line():
     # Run
     try:
         if args.action == "apps":
-            actions.list_apps(args)
+            command_line_actions.list_apps(args)
         elif args.action == "infos":
-            actions.list_infos(args)
+            command_line_actions.list_infos(args)
         elif args.action == "versions":
-            actions.list_versions(args)
+            command_line_actions.list_versions(args)
         elif args.action == "screenshots":
-            actions.list_screenshots(args)
+            command_line_actions.list_screenshots(args)
         elif args.action == "previews":
-            actions.list_previews(args)
+            command_line_actions.list_previews(args)
         elif args.action == "download":
-            actions.download_assets(args)
+            command_line_actions.download_assets(args)
         elif args.action == "publish":
-            actions.publish_assets(args)
+            command_line_actions.publish_assets(args)
     except requests.exceptions.SSLError as error:
         sys.exit(error)
     except requests.exceptions.ConnectionError as error:

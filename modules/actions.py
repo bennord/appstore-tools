@@ -1,38 +1,19 @@
 import colorama
-import modules.appstore_api as appstore
+import modules.appstore as appstore
 import modules.command_line as command_line
 import sys
 import os
 import logging
 import requests
 from modules.print_util import color_term, json_term
-from typing import Union
+from typing import Union, Optional
+from enum import Enum, auto
 
 
-def get_access_token(args):
-    try:
-        access_token = appstore.create_access_token(
-            issuer_id=args.issuer_id, key_id=args.key_id, key=args.key
-        )
-        return access_token
-    except ValueError as error:
-        sys.exit(error)
-
-
-def get_app_id(args, access_token):
-    if args.app_id == None:
-        args.app_id = appstore.get_app_id(
-            bundle_id=args.bundle_id, access_token=access_token
-        )
-    return args.app_id
-
-
-def get_bundle_id(args, access_token):
-    if args.bundle_id == None:
-        args.bundle_id = appstore.get_bundle_id(
-            app_id=args.app_id, access_token=access_token
-        )
-    return args.bundle_id
+class Verbosity(Enum):
+    SHORT = auto()
+    LONG = auto()
+    FULL = auto()
 
 
 def fetch_screenshot(screenshot_info: object):
@@ -66,9 +47,8 @@ def read_txt_file(
         return None
 
 
-def list_apps(args):
-    access_token = get_access_token(args)
-
+def list_apps(access_token: str):
+    """List the apps found on the appstore."""
     apps = appstore.get_apps(access_token=access_token)
     apps_selected = [
         {
@@ -82,66 +62,86 @@ def list_apps(args):
     print(json_term(apps_selected))
 
 
-def list_versions(args):
-    access_token = get_access_token(args)
-    app_id = get_app_id(args, access_token)
-    platforms = command_line.create_platform_filter_list(args)
-    states = command_line.create_version_state_filter_list(args)
-
+def list_versions(
+    access_token: str,
+    app_id: str,
+    platforms: appstore.PlatformList,
+    states: appstore.VersionStateList,
+    verbosity: Verbosity = Verbosity.SHORT,
+):
+    """List the app versions found on the appstore."""
     versions = appstore.get_versions(
         app_id=app_id, access_token=access_token, platforms=platforms, states=states
     )
-    versions_selected = [
-        {
-            "id": x["id"],
-            "platform": x["attributes"]["platform"],
-            "versionString": x["attributes"]["versionString"],
-            "appStoreState": x["attributes"]["appStoreState"],
-        }
-        for x in versions
-    ]
-    print(json_term({"appId": app_id, "versions": versions_selected}))
+    if verbosity == Verbosity.SHORT:
+        versions = [
+            {
+                "id": x["id"],
+                "platform": x["attributes"]["platform"],
+                "versionString": x["attributes"]["versionString"],
+                "appStoreState": x["attributes"]["appStoreState"],
+            }
+            for x in versions
+        ]
+    print(json_term({"appId": app_id, "versions": versions}))
 
 
-def list_infos(args):
-    access_token = get_access_token(args)
-    app_id = get_app_id(args, access_token)
-    states = command_line.create_version_state_filter_list(args)
-
+def list_infos(
+    access_token: str,
+    app_id: str,
+    states: appstore.VersionStateList,
+    verbosity: Verbosity = Verbosity.SHORT,
+):
+    """List the app infos found on the appstore."""
     infos = appstore.get_infos(app_id=app_id, access_token=access_token, states=states)
 
-    infos_selected = []
-    for x in infos:
-        relationships = {}
-        for k in x["relationships"]:
-            relationships[k] = x["relationships"][k]["links"]["related"]
-
-        infos_selected.append(
+    if verbosity == Verbosity.SHORT:
+        infos = [
             {
                 "id": x["id"],
                 "appStoreState": x["attributes"]["appStoreState"],
                 "appStoreAgeRating": x["attributes"]["appStoreAgeRating"],
                 "brazilAgeRating": x["attributes"]["brazilAgeRating"],
                 "kidsAgeBand": x["attributes"]["kidsAgeBand"],
-                **relationships,
             }
-        )
+            for x in infos
+        ]
+    elif verbosity == Verbosity.LONG:
+        infos_selected = []
+        for x in infos:
+            relationships = {}
+            for k in x["relationships"]:
+                relationships[k] = x["relationships"][k]["links"]["related"]
+            infos_selected.append(
+                {
+                    "id": x["id"],
+                    "appStoreState": x["attributes"]["appStoreState"],
+                    "appStoreAgeRating": x["attributes"]["appStoreAgeRating"],
+                    "brazilAgeRating": x["attributes"]["brazilAgeRating"],
+                    "kidsAgeBand": x["attributes"]["kidsAgeBand"],
+                    **relationships,
+                }
+            )
+        infos = infos_selected
 
-    print(json_term({"appId": app_id, "infos": infos_selected}))
+    print(json_term({"appId": app_id, "infos": infos}))
 
 
-def list_screenshots(args):
-    access_token = get_access_token(args)
-    app_id = get_app_id(args, access_token)
-    platforms = command_line.create_platform_filter_list(args)
-    states = command_line.create_version_state_filter_list(args)
-
+def list_screenshots(
+    access_token: str,
+    app_id: str,
+    platforms: appstore.PlatformList,
+    states: appstore.VersionStateList,
+    version_limit: Optional[int],  # pylint: disable=unsubscriptable-object
+    verbosity: Verbosity = Verbosity.SHORT,
+):
+    """List screenhots for each screenshot set of each app version."""
     logging.info(color_term(colorama.Fore.GREEN + "app_id: ") + str(app_id))
 
     versions = appstore.get_versions(
         app_id=app_id, access_token=access_token, platforms=platforms, states=states
     )
-    for version in versions[: args.version_limit]:
+    for version in versions[:version_limit]:
         version_id = version["id"]
         version_state = version["attributes"]["appStoreState"]
         print(
@@ -172,7 +172,7 @@ def list_screenshots(args):
                 )
                 screenshots = (
                     screenshots
-                    if args.full
+                    if verbosity == Verbosity.FULL
                     else [
                         {
                             "id": x["id"],
@@ -185,7 +185,7 @@ def list_screenshots(args):
                         }
                         for x in screenshots
                     ]
-                    if args.long
+                    if verbosity == Verbosity.LONG
                     else [x["attributes"]["fileName"] for x in screenshots]
                 )
                 print(
@@ -198,18 +198,20 @@ def list_screenshots(args):
                 )
 
 
-def list_previews(args):
-    access_token = get_access_token(args)
-    app_id = get_app_id(args, access_token)
-    platforms = command_line.create_platform_filter_list(args)
-    states = command_line.create_version_state_filter_list(args)
-
+def list_previews(
+    access_token: str,
+    app_id: str,
+    platforms: appstore.PlatformList,
+    states: appstore.VersionStateList,
+    version_limit: Optional[int],  # pylint: disable=unsubscriptable-object
+):
+    """List previews for each preview set of each app version."""
     logging.info(color_term(colorama.Fore.GREEN + "app_id: ") + str(app_id))
 
     versions = appstore.get_versions(
         app_id=app_id, access_token=access_token, platforms=platforms, states=states
     )
-    for version in versions[: args.version_limit]:
+    for version in versions[:version_limit]:
         version_id = version["id"]
         version_state = version["attributes"]["appStoreState"]
         print(
@@ -249,6 +251,7 @@ def download_info(
     bundle_id: str,
     version_states: appstore.VersionStateList = list(appstore.VersionState),
 ):
+    """Download the app info to the local app directory."""
     # Infos
     infos = appstore.get_infos(
         app_id=app_id,
@@ -312,6 +315,7 @@ def download_version(
     platforms: appstore.PlatformList,
     version_states: appstore.VersionStateList = list(appstore.VersionState),
 ):
+    """Download the app version localized data and screenshots to the local app directory."""
     # Versions
     versions = appstore.get_versions(
         app_id=app_id,
@@ -436,19 +440,17 @@ def download_version(
                 #     print(color_term(colorama.Fore.RED + "FAILED"))
 
 
-def download_assets(args):
-    access_token = get_access_token(args)
-    app_id = get_app_id(args, access_token)
-    bundle_id = get_bundle_id(args, access_token)
-    asset_dir = args.asset_dir
+def download_assets(
+    access_token: str,
+    asset_dir: str,
+    app_id: str,
+    bundle_id: str,
+    platforms: appstore.PlatformList,
+    version_states: appstore.VersionStateList = list(appstore.VersionState),
+    overwrite: bool = False,
+):
+    """Download all the app meta data to the local app directory."""
     app_dir = os.path.join(asset_dir, bundle_id)
-
-    platforms = [args.platform]
-    version_states = (
-        [args.version_state]
-        if args.version_state is not None
-        else list(appstore.VersionState)
-    )
 
     print(
         color_term(
@@ -460,7 +462,7 @@ def download_assets(args):
     )
 
     # App
-    if os.path.isdir(app_dir) and not args.overwrite:
+    if os.path.isdir(app_dir) and not overwrite:
         raise FileExistsError(
             f"App directory {colorama.Fore.CYAN}{app_dir}{colorama.Fore.RESET} already exists. "
             + "Specify '--overwrite' if you wish to force downloading to an existing directory."
@@ -484,14 +486,16 @@ def download_assets(args):
     print(color_term(colorama.Fore.GREEN + "Download complete"))
 
 
-def publish_assets(args):
-    access_token = get_access_token(args)
-    app_id = get_app_id(args, access_token)
-    bundle_id = get_bundle_id(args, access_token)
-    asset_dir = args.asset_dir
-    platform = args.platform
-    version_string = args.version_string
-
+def publish_assets(
+    access_token: str,
+    asset_dir: str,
+    app_id: str,
+    bundle_id: str,
+    platform: Union[appstore.Platform, str],  # pylint: disable=unsubscriptable-object
+    version_string: str,
+):
+    """Publish all the app meta data app store, using the fist editable app version.
+    If none is found, a new version will be created for the specified target platform."""
     print(
         color_term(
             colorama.Fore.GREEN
@@ -579,8 +583,7 @@ def publish_assets(args):
                     + color_term(colorama.Fore.BLUE + str(version_state))
                     + color_term(colorama.Fore.GREEN + ", locale ")
                     + color_term(colorama.Fore.BLUE + str(locale))
-                    + ": "
-                    + " detected changes... updating"
+                    + ": detected changes... updating"
                 )
                 appstore.update_version_localization(
                     localization_id=loc_id,
@@ -593,6 +596,5 @@ def publish_assets(args):
                     + color_term(colorama.Fore.BLUE + str(version_state))
                     + color_term(colorama.Fore.GREEN + ", locale ")
                     + color_term(colorama.Fore.BLUE + str(locale))
-                    + ": "
-                    + " no changes... skipping"
+                    + ": no changes... skipping"
                 )
