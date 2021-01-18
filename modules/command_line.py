@@ -399,6 +399,19 @@ def run_command_line():
     add_authentication_group(previews_parser)
     add_app_id_group(previews_parser)
 
+    # Action: categories
+    categories_parser = add_subparser(
+        action_subparsers,
+        "categories",
+        help="Lists the appstore's heirarchy of categories and subcategories.",
+    )
+    categories_group = categories_parser.add_argument_group(
+        title="Categories",
+    )
+    add_platform_filter_argument(categories_group)
+    add_verbosity_arguments(categories_group)
+    add_authentication_group(categories_parser)
+
     # Action: download
     download_parser = add_subparser(
         action_subparsers,
@@ -460,6 +473,8 @@ def run_command_line():
 
     # Run
     try:
+        if args.action == "categories":
+            command_line_actions.list_categories(args)
         if args.action == "apps":
             command_line_actions.list_apps(args)
         elif args.action == "infos":

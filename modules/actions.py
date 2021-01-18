@@ -47,6 +47,31 @@ def read_txt_file(
         return None
 
 
+def list_categories(
+    access_token: str,
+    platforms: appstore.PlatformList,
+    verbosity: Verbosity = Verbosity.SHORT,
+):
+    """List the appstore's heirachry of categories and subcategories."""
+    categories = appstore.get_categories(access_token=access_token, platforms=platforms)
+    categories.sort(key=lambda x: x["id"])
+
+    if verbosity == Verbosity.SHORT:
+        for x in categories:
+            print(
+                x["id"]
+                + color_term(
+                    colorama.Fore.LIGHTBLACK_EX
+                    + f' {{{",".join(x["attributes"]["platforms"])}}}'
+                )
+            )
+            for sub in x["relationships"]["subcategories"]["data"]:
+                print(color_term(colorama.Style.DIM + f'  {sub["id"]}'))
+
+    else:
+        print(json_term(categories))
+
+
 def list_apps(access_token: str, verbosity: Verbosity = Verbosity.SHORT):
     """List the apps found on the appstore."""
     apps = appstore.get_apps(access_token=access_token)

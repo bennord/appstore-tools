@@ -187,9 +187,13 @@ def fetch(path: str, method: FetchMethod, access_token: str, post_data=None):
 
 def get_categories(
     access_token: str,
+    platforms: PlatformList = list(Platform),
 ):
+    platforms = [x.name if type(x) is Platform else x for x in platforms]
     return fetch(
-        path=f"/appCategories", method=FetchMethod.GET, access_token=access_token
+        path=f"/appCategories?filter[platforms]={','.join(platforms)}&exists[parent]=false&include=subcategories",
+        method=FetchMethod.GET,
+        access_token=access_token,
     )["data"]
 
 

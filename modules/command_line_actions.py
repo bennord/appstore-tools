@@ -31,6 +31,18 @@ def get_bundle_id(args, access_token):
     return args.bundle_id
 
 
+def list_categories(args):
+    access_token = get_access_token(args)
+    platforms = command_line.create_platform_filter_list(args)
+    verbosity = args.verbosity
+
+    actions.list_categories(
+        access_token=access_token,
+        platforms=platforms,
+        verbosity=verbosity,
+    )
+
+
 def list_apps(args):
     access_token = get_access_token(args)
     verbosity = args.verbosity
