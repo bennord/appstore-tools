@@ -176,7 +176,16 @@ def add_version_state_filter_argument(parser: configargparse.ArgumentParser):
     )
 
 
-def add_filters_group(parser: configargparse.ArgumentParser):
+def add_info_filters_group(parser: configargparse.ArgumentParser):
+    filter_group = parser.add_argument_group(
+        title="Result filters",
+    )
+    add_editable_filter_argument(filter_group)
+    add_live_filter_argument(filter_group)
+    add_version_state_filter_argument(filter_group)
+
+
+def add_version_filters_group(parser: configargparse.ArgumentParser):
     filter_group = parser.add_argument_group(
         title="Result filters",
     )
@@ -299,13 +308,23 @@ def run_command_line():
     )
     add_authentication_group(apps_parser)
 
+    # Action: infos
+    infos_parser = add_subparser(
+        action_subparsers,
+        "infos",
+        help="Lists all app infos.",
+    )
+    add_info_filters_group(infos_parser)
+    add_authentication_group(infos_parser)
+    add_app_id_group(infos_parser)
+
     # Action: versions
     versions_parser = add_subparser(
         action_subparsers,
         "versions",
         help="Lists all app versions.",
     )
-    add_filters_group(versions_parser)
+    add_version_filters_group(versions_parser)
     add_authentication_group(versions_parser)
     add_app_id_group(versions_parser)
 
@@ -334,7 +353,7 @@ def run_command_line():
         default=1,
         help="Limit the number of app versions displayed.",
     )
-    add_filters_group(screenshots_parser)
+    add_version_filters_group(screenshots_parser)
     add_authentication_group(screenshots_parser)
     add_app_id_group(screenshots_parser)
 
@@ -363,7 +382,7 @@ def run_command_line():
         default=1,
         help="Limit the number of app versions displayed.",
     )
-    add_filters_group(previews_parser)
+    add_version_filters_group(previews_parser)
     add_authentication_group(previews_parser)
     add_app_id_group(previews_parser)
 
@@ -430,6 +449,8 @@ def run_command_line():
     try:
         if args.action == "apps":
             actions.list_apps(args)
+        elif args.action == "infos":
+            actions.list_infos(args)
         elif args.action == "versions":
             actions.list_versions(args)
         elif args.action == "screenshots":
@@ -447,6 +468,8 @@ def run_command_line():
     except requests.exceptions.HTTPError as error:
         sys.exit(error)
     except appstore.ResourceNotFoundException as error:
+        sys.exit(error)
+    except FileExistsError as error:
         sys.exit(error)
     except KeyboardInterrupt as error:
         sys.exit(error)

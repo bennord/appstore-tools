@@ -70,6 +70,22 @@ VersionStateList = List[
 ]
 
 
+class InfoAttributes(TypedDict):  # pylint: disable=inherit-non-class
+    primaryCategory: Optional[str]  # pylint: disable=unsubscriptable-object
+    primarySubcategoryOne: Optional[str]  # pylint: disable=unsubscriptable-object
+    primarySubcategoryTwo: Optional[str]  # pylint: disable=unsubscriptable-object
+    secondaryCategory: Optional[str]  # pylint: disable=unsubscriptable-object
+    secondarySubcategoryOne: Optional[str]  # pylint: disable=unsubscriptable-object
+    secondarySubcategoryTwo: Optional[str]  # pylint: disable=unsubscriptable-object
+
+
+class InfoLocalizationAttributes(TypedDict):  # pylint: disable=inherit-non-class
+    name: Optional[str]  # pylint: disable=unsubscriptable-object
+    privacyPolicyText: Optional[str]  # pylint: disable=unsubscriptable-object
+    privacyPolicyUrl: Optional[str]  # pylint: disable=unsubscriptable-object
+    subtitle: Optional[str]  # pylint: disable=unsubscriptable-object
+
+
 class VersionLocalizationAttributes(TypedDict):  # pylint: disable=inherit-non-class
     description: Optional[str]  # pylint: disable=unsubscriptable-object
     keywords: Optional[str]  # pylint: disable=unsubscriptable-object
@@ -208,6 +224,58 @@ def get_bundle_id(
     return app["attributes"]["bundleId"]
 
 
+def get_infos(
+    app_id: str,
+    access_token: str,
+    states: VersionStateList = list(VersionState),
+):
+    """Get the list of app infos, optionally filtering by appstore state."""
+    versions = fetch(
+        path=f"/apps/{app_id}/appInfos",
+        method=FetchMethod.GET,
+        access_token=access_token,
+    )["data"]
+
+    states = [x.name if type(x) is VersionState else x for x in states]
+    return [v for v in versions if v["attributes"]["appStoreState"] in states]
+
+
+def update_info(
+    info_id: str,
+    info_attributes: InfoAttributes,
+    access_token: str,
+):
+    """Update the non-localized AppInfo data."""
+    relationships = {}
+    for k in info_attributes:
+        relationships[k] = {"data": {"id": info_attributes[k], "type": "appCategories"}}
+
+    return fetch(
+        path=f"/appInfos/{info_id}",
+        method=FetchMethod.PATCH,
+        access_token=access_token,
+        post_data={
+            "data": {
+                "id": info_id,
+                "relationships": relationships,
+                "type": "appInfos",
+            }
+        },
+    )["data"]
+
+
+def get_info_localizations(
+    info_id: str,
+    access_token: str,
+):
+    """Get the list of app info localizations."""
+    return fetch(
+        path=f"/appInfos/{info_id}/appInfoLocalizations",
+        method=FetchMethod.GET,
+        access_token=access_token,
+    )["data"]
+
+
 def create_version(
     app_id: str,
     platform: str,
@@ -223,7 +291,7 @@ def create_version(
             "data": {
                 "attributes": {"platform": platform, "versionString": version_string},
                 "relationships": {"app": {"data": {"id": app_id, "type": "apps"}}},
-                "type": " appStoreVersions",
+                "type": "appStoreVersions",
             }
         },
     )["data"]
@@ -283,6 +351,31 @@ def get_version_live(
         raise ResourceNotFoundException(f'No app version matching state "{live_state}"')
     else:
         return versions[0]
+
+
+def create_version_localization(
+    version_id: str,
+    locale: str,
+    localization_attributes: VersionLocalizationAttributes,
+    access_token: str,
+):
+    """Creates a new app store version localization."""
+    return fetch(
+        path=f"/appStoreVersionLocalizations",
+        method=FetchMethod.POST,
+        access_token=access_token,
+        post_data={
+            "data": {
+                "attributes": {"locale": locale, **localization_attributes},
+                "relationships": {
+                    "appStoreVersion": {
+                        "data": {"id": version_id, "type": "appStoreVersions"}
+                    }
+                },
+                "type": "appStoreVersionLocalizations",
+            }
+        },
+    )["data"]
 
 
 def get_version_localizations(

@@ -103,6 +103,33 @@ def list_versions(args):
     print(json_term({"appId": app_id, "versions": versions_selected}))
 
 
+def list_infos(args):
+    access_token = get_access_token(args)
+    app_id = get_app_id(args, access_token)
+    states = command_line.create_version_state_filter_list(args)
+
+    infos = appstore.get_infos(app_id=app_id, access_token=access_token, states=states)
+
+    infos_selected = []
+    for x in infos:
+        relationships = {}
+        for k in x["relationships"]:
+            relationships[k] = x["relationships"][k]["links"]["related"]
+
+        infos_selected.append(
+            {
+                "id": x["id"],
+                "appStoreState": x["attributes"]["appStoreState"],
+                "appStoreAgeRating": x["attributes"]["appStoreAgeRating"],
+                "brazilAgeRating": x["attributes"]["brazilAgeRating"],
+                "kidsAgeBand": x["attributes"]["kidsAgeBand"],
+                **relationships,
+            }
+        )
+
+    print(json_term({"appId": app_id, "infos": infos_selected}))
+
+
 def list_screenshots(args):
     access_token = get_access_token(args)
     app_id = get_app_id(args, access_token)
@@ -215,35 +242,77 @@ def list_previews(args):
                 print(json_term(preview_set))
 
 
-def download_assets(args):
-    access_token = get_access_token(args)
-    app_id = get_app_id(args, access_token)
-    bundle_id = get_bundle_id(args, access_token)
-    asset_dir = args.asset_dir
-    app_dir = os.path.join(asset_dir, bundle_id)
+def download_info(
+    access_token: str,
+    app_dir: str,
+    app_id: str,
+    bundle_id: str,
+    version_states: appstore.VersionStateList = list(appstore.VersionState),
+):
+    # Infos
+    infos = appstore.get_infos(
+        app_id=app_id,
+        access_token=access_token,
+        states=version_states,
+    )
+    if len(infos) == 0:
+        message = f"No app infos found"
+        if version_states != list(appstore.VersionState):
+            message += f": {colorama.Fore.CYAN}{version_states}{colorama.Fore.RESET}"
+        raise appstore.ResourceNotFoundException(color_term(message))
+
+    info = infos[0]
+    info_id = info["id"]
+    info_state = info["attributes"]["appStoreState"]
 
     print(
         color_term(
-            colorama.Fore.GREEN
-            + "Using local app directory: "
-            + colorama.Fore.BLUE
-            + app_dir
+            f"{colorama.Fore.GREEN}Downloading app info: "
+            + f"{colorama.Fore.BLUE}{info_id}{colorama.Fore.RESET}, "
+            + f"{colorama.Fore.CYAN}{info_state}{colorama.Fore.RESET}"
         )
     )
 
-    if os.path.isdir(app_dir) and not args.overwrite:
+    # Info Localizations
+    localizations = appstore.get_info_localizations(
+        info_id=info_id, access_token=access_token
+    )
+
+    for loc in localizations:
+        loc_id = loc["id"]
+        loc_attr = loc["attributes"]
+        locale = loc_attr["locale"]
+        loc_dir = os.path.join(app_dir, locale)
+
         print(
-            f"App directory already exists. Specify '--overwrite' if you wish to force downloading to an existing directory."
+            color_term(
+                colorama.Fore.GREEN
+                + "Locale: "
+                + f"{colorama.Fore.MAGENTA}{locale}{colorama.Fore.RESET} "
+                + f"{colorama.Fore.BLUE}{loc_id}{colorama.Fore.RESET}"
+            )
         )
-        return
 
-    # Get versions
-    platforms = [args.platform]
-    version_states = (
-        [args.version_state]
-        if args.version_state is not None
-        else list(appstore.VersionState)
-    )
+        # Locale directory
+        os.makedirs(name=loc_dir, exist_ok=True)
+
+        for key in appstore.InfoLocalizationAttributes.__annotations__.keys():
+            content = loc_attr[key] if loc_attr[key] is not None else ""
+            write_txt_file(
+                path=os.path.join(loc_dir, key + ".txt"),
+                content=content,
+            )
+
+
+def download_version(
+    access_token: str,
+    app_dir: str,
+    app_id: str,
+    bundle_id: str,
+    platforms: appstore.PlatformList,
+    version_states: appstore.VersionStateList = list(appstore.VersionState),
+):
+    # Versions
     versions = appstore.get_versions(
         app_id=app_id,
         access_token=access_token,
@@ -251,18 +320,10 @@ def download_assets(args):
         states=version_states,
     )
     if len(versions) == 0:
-        message = (
-            "No app version found: "
-            + "platform "
-            + f"{colorama.Fore.BLUE}{args.platform}{colorama.Fore.RESET}"
-        )
-        if args.version_state is not None:
-            message += (
-                ", version-state "
-                + f"{colorama.Fore.BLUE}{args.version_state}{colorama.Fore.RESET}"
-            )
-        print(color_term(message))
-        return
+        message = f"No app version found: {colorama.Fore.CYAN}{platforms}{colorama.Fore.RESET}"
+        if version_states != list(appstore.VersionState):
+            message += f", {colorama.Fore.CYAN}{version_states}{colorama.Fore.RESET}"
+        raise appstore.ResourceNotFoundException(color_term(message))
 
     version = versions[0]
     version_id = version["id"]
@@ -272,14 +333,13 @@ def download_assets(args):
     print(
         color_term(
             f"{colorama.Fore.GREEN}Downloading app version: "
-            + f"{colorama.Fore.MAGENTA}{bundle_id}{colorama.Fore.RESET} "
-            + f"(app_id: {colorama.Fore.BLUE}{app_id}{colorama.Fore.RESET}, "
-            + f"platform: {colorama.Fore.BLUE}{version_platform}{colorama.Fore.RESET}, "
-            + f"version_id: {colorama.Fore.BLUE}{version_id}{colorama.Fore.RESET}, "
-            + f"version_state: {colorama.Fore.BLUE}{version_state}{colorama.Fore.RESET})"
+            + f"{colorama.Fore.BLUE}{version_id}{colorama.Fore.RESET}, "
+            + f"{colorama.Fore.CYAN}{version_platform}{colorama.Fore.RESET}, "
+            + f"{colorama.Fore.CYAN}{version_state}{colorama.Fore.RESET}"
         )
     )
 
+    # Version Localizations
     localizations = appstore.get_version_localizations(
         version_id=version_id, access_token=access_token
     )
@@ -295,7 +355,7 @@ def download_assets(args):
                 colorama.Fore.GREEN
                 + "Locale: "
                 + f"{colorama.Fore.MAGENTA}{locale}{colorama.Fore.RESET} "
-                + f"(loc_id: {colorama.Fore.BLUE}{loc_id}{colorama.Fore.RESET}) "
+                + f"{colorama.Fore.BLUE}{loc_id}{colorama.Fore.RESET}"
             )
         )
 
@@ -375,6 +435,52 @@ def download_assets(args):
                 # else:
                 #     print(color_term(colorama.Fore.RED + "FAILED"))
 
+
+def download_assets(args):
+    access_token = get_access_token(args)
+    app_id = get_app_id(args, access_token)
+    bundle_id = get_bundle_id(args, access_token)
+    asset_dir = args.asset_dir
+    app_dir = os.path.join(asset_dir, bundle_id)
+
+    platforms = [args.platform]
+    version_states = (
+        [args.version_state]
+        if args.version_state is not None
+        else list(appstore.VersionState)
+    )
+
+    print(
+        color_term(
+            f"{colorama.Fore.CYAN}{bundle_id} "
+            + f"{colorama.Fore.BLUE}{app_id} "
+            + f"{colorama.Fore.GREEN}➜ "
+            + f"{colorama.Fore.CYAN}{app_dir}"
+        )
+    )
+
+    # App
+    if os.path.isdir(app_dir) and not args.overwrite:
+        raise FileExistsError(
+            f"App directory {colorama.Fore.CYAN}{app_dir}{colorama.Fore.RESET} already exists. "
+            + "Specify '--overwrite' if you wish to force downloading to an existing directory."
+        )
+
+    download_info(
+        access_token=access_token,
+        app_dir=app_dir,
+        app_id=app_id,
+        bundle_id=bundle_id,
+        version_states=version_states,
+    )
+    download_version(
+        access_token=access_token,
+        app_dir=app_dir,
+        app_id=app_id,
+        bundle_id=bundle_id,
+        platforms=platforms,
+        version_states=version_states,
+    )
     print(color_term(colorama.Fore.GREEN + "Download complete"))
 
 
