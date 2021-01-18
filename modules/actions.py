@@ -47,19 +47,28 @@ def read_txt_file(
         return None
 
 
-def list_apps(access_token: str):
+def list_apps(access_token: str, verbosity: Verbosity = Verbosity.SHORT):
     """List the apps found on the appstore."""
     apps = appstore.get_apps(access_token=access_token)
-    apps_selected = [
-        {
-            "id": v["id"],
-            "name": v["attributes"]["name"],
-            "bundleId": v["attributes"]["bundleId"],
-            "primaryLocale": v["attributes"]["primaryLocale"],
-        }
-        for v in apps
-    ]
-    print(json_term(apps_selected))
+    if verbosity == Verbosity.SHORT:
+        apps = [
+            {
+                "id": v["id"],
+                "name": v["attributes"]["name"],
+                "bundleId": v["attributes"]["bundleId"],
+                "primaryLocale": v["attributes"]["primaryLocale"],
+            }
+            for v in apps
+        ]
+    elif verbosity == Verbosity.LONG:
+        apps = [
+            {
+                "id": v["id"],
+                **v["attributes"],
+            }
+            for v in apps
+        ]
+    print(json_term(apps))
 
 
 def list_versions(

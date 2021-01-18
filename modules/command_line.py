@@ -325,6 +325,10 @@ def run_command_line():
         "apps",
         help="Lists all apps under the app store account.",
     )
+    apps_group = apps_parser.add_argument_group(
+        title="Apps",
+    )
+    add_verbosity_arguments(apps_group)
     add_authentication_group(apps_parser)
 
     # Action: infos
@@ -333,6 +337,10 @@ def run_command_line():
         "infos",
         help="Lists all app infos.",
     )
+    infos_group = infos_parser.add_argument_group(
+        title="Infos",
+    )
+    add_verbosity_arguments(infos_group)
     add_info_filters_group(infos_parser)
     add_authentication_group(infos_parser)
     add_app_id_group(infos_parser)

@@ -33,7 +33,12 @@ def get_bundle_id(args, access_token):
 
 def list_apps(args):
     access_token = get_access_token(args)
-    actions.list_apps(access_token=access_token)
+    verbosity = args.verbosity
+
+    actions.list_apps(
+        access_token=access_token,
+        verbosity=verbosity,
+    )
 
 
 def list_versions(args):

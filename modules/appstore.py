@@ -185,6 +185,14 @@ def fetch(path: str, method: FetchMethod, access_token: str, post_data=None):
     return result
 
 
+def get_categories(
+    access_token: str,
+):
+    return fetch(
+        path=f"/appCategories", method=FetchMethod.GET, access_token=access_token
+    )["data"]
+
+
 def get_apps(
     access_token: str,
 ):
