@@ -323,7 +323,7 @@ def run_command_line():
     apps_parser = add_subparser(
         action_subparsers,
         "apps",
-        help="Lists all apps under the app store account.",
+        help="List all apps under the app store account.",
     )
     apps_group = apps_parser.add_argument_group(
         title="Apps",
@@ -335,7 +335,7 @@ def run_command_line():
     infos_parser = add_subparser(
         action_subparsers,
         "infos",
-        help="Lists all app infos.",
+        help="List all app infos.",
     )
     infos_group = infos_parser.add_argument_group(
         title="Infos",
@@ -349,7 +349,7 @@ def run_command_line():
     versions_parser = add_subparser(
         action_subparsers,
         "versions",
-        help="Lists all app versions.",
+        help="List all app versions.",
     )
     versions_group = versions_parser.add_argument_group(
         title="Versions",
@@ -363,7 +363,7 @@ def run_command_line():
     screenshots_parser = add_subparser(
         action_subparsers,
         "screenshots",
-        help="Lists the screenshots for an app.",
+        help="List the screenshots for an app.",
     )
     screenshots_group = screenshots_parser.add_argument_group(
         title="Screenshots",
@@ -383,7 +383,7 @@ def run_command_line():
     previews_parser = add_subparser(
         action_subparsers,
         "previews",
-        help="Lists the previews for an app.",
+        help="List the previews for an app.",
     )
     previews_group = previews_parser.add_argument_group(
         title="Previews",
@@ -403,7 +403,7 @@ def run_command_line():
     categories_parser = add_subparser(
         action_subparsers,
         "categories",
-        help="Lists the appstore's heirarchy of categories and subcategories.",
+        help="List the appstore's heirarchy of categories and subcategories.",
     )
     categories_group = categories_parser.add_argument_group(
         title="Categories",
