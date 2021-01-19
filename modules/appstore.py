@@ -24,6 +24,7 @@ class FetchMethod(Enum):
     GET = auto()
     POST = auto()
     PATCH = auto()
+    DELETE = auto()
 
 
 class Platform(Enum):
@@ -168,18 +169,23 @@ def fetch(path: str, method: FetchMethod, access_token: str, data=None):
     )
 
     if method == FetchMethod.GET:
-        response = requests.get(url, headers=headers)
+        response = requests.get(url=url, headers=headers)
     elif method == FetchMethod.POST:
         headers["Content-Type"] = "application/json"
         response = requests.post(url=url, headers=headers, data=json.dumps(data))
     elif method == FetchMethod.PATCH:
         headers["Content-Type"] = "application/json"
         response = requests.patch(url=url, headers=headers, data=json.dumps(data))
+    elif method == FetchMethod.DELETE:
+        response = requests.delete(url=url, headers=headers)
 
     content_type = response.headers["content-type"]
 
     if content_type == "application/json":
         result = response.json()
+        logging.debug(
+            color_term(f"{colorama.Fore.BLUE}response body:\n") + json_term(result)
+        )
     elif content_type == "application/a-gzip":
         # TODO implement stream decompress
         zipped_data = b""
@@ -192,16 +198,15 @@ def fetch(path: str, method: FetchMethod, access_token: str, data=None):
     else:
         result = response
 
-    logging.debug(
-        color_term(f"{colorama.Fore.BLUE}response body:\n") + json_term(result)
-    )
-
     # raise exceptions for easier handling
     if response.status_code == 404:
         raise ResourceNotFoundException(
-            f"Resource not found at {url} (HttpError {404})"
+            f'{url} (HttpError {response.status_code})\n{json_term({"request": data, "response":result})}'
         )
-    response.raise_for_status()
+    elif not response.ok:
+        raise requests.exceptions.HTTPError(
+            f'{url} (HttpError {response.status_code})\n{json_term({"request": data, "response":result})}'
+        )
 
     return result
 
@@ -349,6 +354,18 @@ def update_info_localization(
             }
         },
     )["data"]
+
+
+def delete_info_localization(
+    info_localization_id: str,
+    access_token: str,
+):
+    """Deletes the specified App Info Localization."""
+    return fetch(
+        path=f"/appInfoLocalizations/{info_localization_id}",
+        method=FetchMethod.DELETE,
+        access_token=access_token,
+    )
 
 
 def create_version(
@@ -503,6 +520,18 @@ def update_version_localization(
             }
         },
     )["data"]
+
+
+def delete_version_localization(
+    localization_id: str,
+    access_token: str,
+):
+    """Deletes the specified App Version Localization."""
+    return fetch(
+        path=f"/appStoreVersionLocalizations/{localization_id}",
+        method=FetchMethod.DELETE,
+        access_token=access_token,
+    )
 
 
 def get_screenshot_sets(

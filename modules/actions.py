@@ -541,6 +541,10 @@ def publish_info(
         )
     )
 
+    file_locales = [
+        x for x in os.listdir(app_dir) if os.path.isdir(os.path.join(app_dir, x))
+    ]
+
     for info in infos:
         info_id = info["id"]
         version_state = info["attributes"]["appStoreState"]
@@ -549,18 +553,34 @@ def publish_info(
             info_id=info_id, access_token=access_token
         )
 
+        # create new localizations
+        info_locales = [loc["attributes"]["locale"] for loc in localizations]
+        new_locales = [x for x in file_locales if x not in info_locales]
+        for locale in new_locales:
+            print(
+                f"Creating new app info localization: {colorama.Fore.CYAN}{locale}{colorama.Fore.RESET}"
+            )
+            loc = appstore.create_info_localization(
+                info_id=info_id,
+                locale=locale,
+                info_localization_attributes={},
+                access_token=access_token,
+            )
+            localizations.append(loc)
+
         for loc in localizations:
             loc_id = loc["id"]
             loc_attr = loc["attributes"]
             locale = loc_attr["locale"]
             loc_dir = os.path.join(app_dir, locale)
 
+            # Delete removed locales
             if not os.path.isdir(loc_dir):
                 print(
-                    color_term(
-                        colorama.Fore.RED + "No app localization directory found: "
-                    )
-                    + loc_dir
+                    f"Deleting app info localization: {colorama.Fore.RED}{locale}{colorama.Fore.RESET}"
+                )
+                appstore.delete_info_localization(
+                    info_localization_id=loc_id, access_token=access_token
                 )
                 continue
 
@@ -585,7 +605,7 @@ def publish_info(
             ]
             if len(loc_diff_keys) > 0:
                 print(
-                    color_term(colorama.Fore.GREEN + "Info ")
+                    color_term(colorama.Fore.GREEN + "AppInfo ")
                     + color_term(colorama.Fore.BLUE + str(version_state))
                     + color_term(colorama.Fore.GREEN + ", locale ")
                     + color_term(colorama.Fore.BLUE + str(locale))
@@ -599,7 +619,7 @@ def publish_info(
                 )
             else:
                 print(
-                    color_term(colorama.Fore.GREEN + "Info ")
+                    color_term(colorama.Fore.GREEN + "AppInfo ")
                     + color_term(colorama.Fore.BLUE + str(version_state))
                     + color_term(colorama.Fore.GREEN + ", locale ")
                     + color_term(colorama.Fore.BLUE + str(locale))
@@ -663,6 +683,10 @@ def publish_version(
                 access_token=access_token,
             )
 
+    file_locales = [
+        x for x in os.listdir(app_dir) if os.path.isdir(os.path.join(app_dir, x))
+    ]
+
     for v in versions:
         version_id = v["id"]
         version_state = v["attributes"]["appStoreState"]
@@ -671,18 +695,35 @@ def publish_version(
             version_id=version_id, access_token=access_token
         )
 
+        # create new localizations
+        version_locales = [loc["attributes"]["locale"] for loc in localizations]
+        new_locales = [x for x in file_locales if x not in version_locales]
+        for locale in new_locales:
+            print(
+                f"Creating new version localization: {colorama.Fore.CYAN}{locale}{colorama.Fore.RESET}"
+            )
+            loc = appstore.create_version_localization(
+                version_id=version_id,
+                locale=locale,
+                localization_attributes={},
+                access_token=access_token,
+            )
+            localizations.append(loc)
+
+        # publish localizations
         for loc in localizations:
             loc_id = loc["id"]
             loc_attr = loc["attributes"]
             locale = loc_attr["locale"]
             loc_dir = os.path.join(app_dir, locale)
 
+            # Delete removed locales
             if not os.path.isdir(loc_dir):
                 print(
-                    color_term(
-                        colorama.Fore.RED + "No app localization directory found: "
-                    )
-                    + loc_dir
+                    f"Deleting version localization: {colorama.Fore.RED}{locale}{colorama.Fore.RESET}"
+                )
+                appstore.delete_version_localization(
+                    localization_id=loc_id, access_token=access_token
                 )
                 continue
 
