@@ -464,6 +464,16 @@ def run_command_line():
         action="store_true",
         help="Prevent a new app version from being created when no versions are in an editable state.",
     )
+    publish_group.add_argument(
+        "--no-create-locale",
+        action="store_true",
+        help="Prevent new locales from being created.",
+    )
+    publish_group.add_argument(
+        "--no-delete-locale",
+        action="store_true",
+        help="Prevent locales from being deleted.",
+    )
     add_authentication_group(publish_parser)
     add_app_id_group(publish_parser)
 

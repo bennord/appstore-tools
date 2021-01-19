@@ -201,11 +201,11 @@ def fetch(path: str, method: FetchMethod, access_token: str, data=None):
     # raise exceptions for easier handling
     if response.status_code == 404:
         raise ResourceNotFoundException(
-            f'{url} (HttpError {response.status_code})\n{json_term({"request": data, "response":result})}'
+            f'{url} {method.name} (HttpError {response.status_code})\n{json_term({"request": data, "response":result})}'
         )
     elif not response.ok:
         raise requests.exceptions.HTTPError(
-            f'{url} (HttpError {response.status_code})\n{json_term({"request": data, "response":result})}'
+            f'{url} {method.name} (HttpError {response.status_code})\n{json_term({"request": data, "response":result})}'
         )
 
     return result

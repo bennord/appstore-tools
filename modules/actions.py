@@ -522,6 +522,12 @@ def download(
     print(color_term(colorama.Fore.GREEN + "Download complete"))
 
 
+def print_locale_status(locale: str, locale_color: str, status: str):
+    print(
+        color_term(f"  {locale_color}{locale:5}{colorama.Style.RESET_ALL} - {status}")
+    )
+
+
 def publish_info(
     access_token: str,
     app_dir: str,
@@ -549,6 +555,12 @@ def publish_info(
         info_id = info["id"]
         version_state = info["attributes"]["appStoreState"]
 
+        print(
+            color_term(colorama.Fore.GREEN + "AppInfo ")
+            + color_term(colorama.Fore.BLUE + f"{info_id} ")
+            + color_term(colorama.Fore.CYAN + f"{version_state}")
+        )
+
         localizations = appstore.get_info_localizations(
             info_id=info_id, access_token=access_token
         )
@@ -557,16 +569,9 @@ def publish_info(
         info_locales = [loc["attributes"]["locale"] for loc in localizations]
         new_locales = [x for x in file_locales if x not in info_locales]
         for locale in new_locales:
-            print(
-                f"Creating new app info localization: {colorama.Fore.CYAN}{locale}{colorama.Fore.RESET}"
+            print_locale_status(
+                locale, colorama.Fore.LIGHTBLACK_EX, "creation not allowed"
             )
-            loc = appstore.create_info_localization(
-                info_id=info_id,
-                locale=locale,
-                info_localization_attributes={},
-                access_token=access_token,
-            )
-            localizations.append(loc)
 
         for loc in localizations:
             loc_id = loc["id"]
@@ -576,11 +581,8 @@ def publish_info(
 
             # Delete removed locales
             if not os.path.isdir(loc_dir):
-                print(
-                    f"Deleting app info localization: {colorama.Fore.RED}{locale}{colorama.Fore.RESET}"
-                )
-                appstore.delete_info_localization(
-                    info_localization_id=loc_id, access_token=access_token
+                print_locale_status(
+                    locale, colorama.Fore.LIGHTBLACK_EX, "deletion not allowed"
                 )
                 continue
 
@@ -604,13 +606,10 @@ def publish_info(
                 if value is not None and value != loc_attr[key]
             ]
             if len(loc_diff_keys) > 0:
-                print(
-                    color_term(colorama.Fore.GREEN + "AppInfo ")
-                    + color_term(colorama.Fore.BLUE + str(version_state))
-                    + color_term(colorama.Fore.GREEN + ", locale ")
-                    + color_term(colorama.Fore.BLUE + str(locale))
-                    + ": detected changes... updating "
-                    + color_term(colorama.Fore.CYAN + str(loc_diff_keys))
+                print_locale_status(
+                    locale,
+                    colorama.Fore.CYAN,
+                    f"updating {colorama.Fore.CYAN}{colorama.Style.DIM}{loc_diff_keys}",
                 )
                 appstore.update_info_localization(
                     info_localization_id=loc_id,
@@ -618,13 +617,7 @@ def publish_info(
                     access_token=access_token,
                 )
             else:
-                print(
-                    color_term(colorama.Fore.GREEN + "AppInfo ")
-                    + color_term(colorama.Fore.BLUE + str(version_state))
-                    + color_term(colorama.Fore.GREEN + ", locale ")
-                    + color_term(colorama.Fore.BLUE + str(locale))
-                    + ": no changes... skipping"
-                )
+                print_locale_status(locale, colorama.Fore.CYAN, "no changes")
 
 
 def publish_version(
@@ -633,9 +626,11 @@ def publish_version(
     app_id: str,
     bundle_id: str,
     platform: Union[appstore.Platform, str],  # pylint: disable=unsubscriptable-object
-    allow_create: bool,
     version_string: str,
     update_version_string: bool,
+    allow_create_version: bool = True,
+    allow_create_locale: bool = True,
+    allow_delete_locale: bool = True,
 ):
     # Get Versions
     versions = appstore.get_versions(
@@ -651,7 +646,7 @@ def publish_version(
         )
     )
 
-    if len(versions) == 0 and allow_create:
+    if len(versions) == 0 and allow_create_version:
         print(
             f"Creating new version: {colorama.Fore.BLUE}{version_string}{colorama.Fore.RESET}"
         )
@@ -691,6 +686,12 @@ def publish_version(
         version_id = v["id"]
         version_state = v["attributes"]["appStoreState"]
 
+        print(
+            color_term(colorama.Fore.GREEN + "Version ")
+            + color_term(colorama.Fore.BLUE + f"{version_id} ")
+            + color_term(colorama.Fore.CYAN + f"{version_state}")
+        )
+
         localizations = appstore.get_version_localizations(
             version_id=version_id, access_token=access_token
         )
@@ -698,17 +699,21 @@ def publish_version(
         # create new localizations
         version_locales = [loc["attributes"]["locale"] for loc in localizations]
         new_locales = [x for x in file_locales if x not in version_locales]
-        for locale in new_locales:
-            print(
-                f"Creating new version localization: {colorama.Fore.CYAN}{locale}{colorama.Fore.RESET}"
-            )
-            loc = appstore.create_version_localization(
-                version_id=version_id,
-                locale=locale,
-                localization_attributes={},
-                access_token=access_token,
-            )
-            localizations.append(loc)
+        if allow_create_locale:
+            for locale in new_locales:
+                print_locale_status(locale, colorama.Fore.YELLOW, "creating")
+                loc = appstore.create_version_localization(
+                    version_id=version_id,
+                    locale=locale,
+                    localization_attributes={},
+                    access_token=access_token,
+                )
+                localizations.append(loc)
+        else:
+            for locale in new_locales:
+                print_locale_status(
+                    locale, colorama.Fore.LIGHTBLACK_EX, "creation not allowed"
+                )
 
         # publish localizations
         for loc in localizations:
@@ -719,12 +724,15 @@ def publish_version(
 
             # Delete removed locales
             if not os.path.isdir(loc_dir):
-                print(
-                    f"Deleting version localization: {colorama.Fore.RED}{locale}{colorama.Fore.RESET}"
-                )
-                appstore.delete_version_localization(
-                    localization_id=loc_id, access_token=access_token
-                )
+                if allow_delete_locale:
+                    print_locale_status(locale, colorama.Fore.RED, "deleting")
+                    appstore.delete_version_localization(
+                        localization_id=loc_id, access_token=access_token
+                    )
+                else:
+                    print_locale_status(
+                        locale, colorama.Fore.LIGHTBLACK_EX, "deletion not allowed"
+                    )
                 continue
 
             # Normalize all attribute values to strings
@@ -747,13 +755,10 @@ def publish_version(
                 if value is not None and value != loc_attr[key]
             ]
             if len(loc_diff_keys) > 0:
-                print(
-                    color_term(colorama.Fore.GREEN + "Version ")
-                    + color_term(colorama.Fore.BLUE + str(version_state))
-                    + color_term(colorama.Fore.GREEN + ", locale ")
-                    + color_term(colorama.Fore.BLUE + str(locale))
-                    + ": detected changes... updating "
-                    + color_term(colorama.Fore.CYAN + str(loc_diff_keys))
+                print_locale_status(
+                    locale,
+                    colorama.Fore.CYAN,
+                    f"updating {colorama.Fore.CYAN}{colorama.Style.DIM}{loc_diff_keys}",
                 )
                 appstore.update_version_localization(
                     localization_id=loc_id,
@@ -761,13 +766,7 @@ def publish_version(
                     access_token=access_token,
                 )
             else:
-                print(
-                    color_term(colorama.Fore.GREEN + "Version ")
-                    + color_term(colorama.Fore.BLUE + str(version_state))
-                    + color_term(colorama.Fore.GREEN + ", locale ")
-                    + color_term(colorama.Fore.BLUE + str(locale))
-                    + ": no changes... skipping"
-                )
+                print_locale_status(locale, colorama.Fore.CYAN, "no changes")
 
 
 def publish(
@@ -776,18 +775,17 @@ def publish(
     app_id: str,
     bundle_id: str,
     platform: Union[appstore.Platform, str],  # pylint: disable=unsubscriptable-object
-    allow_create: bool,
     version_string: str,
     update_version_string: bool,
+    allow_create_version: bool = True,
+    allow_create_locale: bool = True,
+    allow_delete_locale: bool = True,
 ):
     """Publish all the app meta data app store, using any editable app versions found.
     If none are found, a new version can be created for the specified target platform."""
     print(
         color_term(
-            colorama.Fore.GREEN
-            + "Publishing assets from local dir: "
-            + colorama.Fore.MAGENTA
-            + asset_dir
+            "Publishing assets from directory: " + colorama.Fore.CYAN + asset_dir
         )
     )
 
@@ -804,9 +802,11 @@ def publish(
         app_id=app_id,
         bundle_id=bundle_id,
         platform=platform,
-        allow_create=allow_create,
         version_string=version_string,
         update_version_string=update_version_string,
+        allow_create_version=allow_create_version,
+        allow_create_locale=allow_create_locale,
+        allow_delete_locale=allow_delete_locale,
     )
     publish_info(
         access_token=access_token,

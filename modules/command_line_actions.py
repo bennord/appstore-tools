@@ -140,7 +140,9 @@ def publish(args):
         app_id=app_id,
         bundle_id=bundle_id,
         platform=args.platform,
-        allow_create=not args.no_create_version,
         version_string=args.version_string or args.created_version_string,
         update_version_string=args.version_string is not None,
+        allow_create_version=not args.no_create_version,
+        allow_create_locale=not args.no_create_locale,
+        allow_delete_locale=not args.no_delete_locale,
     )
