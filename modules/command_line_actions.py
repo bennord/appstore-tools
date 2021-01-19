@@ -34,22 +34,18 @@ def get_bundle_id(args, access_token):
 def list_categories(args):
     access_token = get_access_token(args)
     platforms = command_line.create_platform_filter_list(args)
-    verbosity = args.verbosity
 
     actions.list_categories(
         access_token=access_token,
         platforms=platforms,
-        verbosity=verbosity,
+        verbosity=args.verbosity,
     )
 
 
 def list_apps(args):
-    access_token = get_access_token(args)
-    verbosity = args.verbosity
-
     actions.list_apps(
-        access_token=access_token,
-        verbosity=verbosity,
+        access_token=get_access_token(args),
+        verbosity=args.verbosity,
     )
 
 
@@ -58,14 +54,13 @@ def list_versions(args):
     app_id = get_app_id(args, access_token)
     platforms = command_line.create_platform_filter_list(args)
     states = command_line.create_version_state_filter_list(args)
-    verbosity = args.verbosity
 
     actions.list_versions(
         access_token=access_token,
         app_id=app_id,
         platforms=platforms,
         states=states,
-        verbosity=verbosity,
+        verbosity=args.verbosity,
     )
 
 
@@ -73,10 +68,12 @@ def list_infos(args):
     access_token = get_access_token(args)
     app_id = get_app_id(args, access_token)
     states = command_line.create_version_state_filter_list(args)
-    verbosity = args.verbosity
 
     actions.list_infos(
-        access_token=access_token, app_id=app_id, states=states, verbosity=verbosity
+        access_token=access_token,
+        app_id=app_id,
+        states=states,
+        verbosity=args.verbosity,
     )
 
 
@@ -85,7 +82,6 @@ def list_screenshots(args):
     app_id = get_app_id(args, access_token)
     platforms = command_line.create_platform_filter_list(args)
     states = command_line.create_version_state_filter_list(args)
-    verbosity = args.verbosity
 
     actions.list_screenshots(
         access_token=access_token,
@@ -93,7 +89,7 @@ def list_screenshots(args):
         platforms=platforms,
         states=states,
         version_limit=args.version_limit,
-        verbosity=verbosity,
+        verbosity=args.verbosity,
     )
 
 
