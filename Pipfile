@@ -16,6 +16,7 @@ argparse-color-formatter = "*"
 pylint = "*"
 rope = "*"
 black = "*"
+mypy = "*"
 
 [requires]
 python_version = "3.9"
