@@ -496,9 +496,9 @@ def run_command_line():
         elif args.action == "previews":
             command_line_actions.list_previews(args)
         elif args.action == "download":
-            command_line_actions.download_assets(args)
+            command_line_actions.download(args)
         elif args.action == "publish":
-            command_line_actions.publish_assets(args)
+            command_line_actions.publish(args)
     except requests.exceptions.SSLError as error:
         sys.exit(error)
     except requests.exceptions.ConnectionError as error:

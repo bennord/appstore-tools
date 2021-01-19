@@ -476,7 +476,7 @@ def download_version(
                 #     print(color_term(colorama.Fore.RED + "FAILED"))
 
 
-def download_assets(
+def download(
     access_token: str,
     asset_dir: str,
     app_id: str,
@@ -729,7 +729,7 @@ def publish_version(
                 )
 
 
-def publish_assets(
+def publish(
     access_token: str,
     asset_dir: str,
     app_id: str,

@@ -112,7 +112,7 @@ def list_previews(args):
     )
 
 
-def download_assets(args):
+def download(args):
     access_token = get_access_token(args)
     app_id = get_app_id(args, access_token)
     bundle_id = get_bundle_id(args, access_token)
@@ -122,7 +122,7 @@ def download_assets(args):
         if args.version_state is not None
         else list(appstore.VersionState)
     )
-    actions.download_assets(
+    actions.download(
         access_token=access_token,
         asset_dir=args.asset_dir,
         app_id=app_id,
@@ -133,12 +133,12 @@ def download_assets(args):
     )
 
 
-def publish_assets(args):
+def publish(args):
     access_token = get_access_token(args)
     app_id = get_app_id(args, access_token)
     bundle_id = get_bundle_id(args, access_token)
 
-    actions.publish_assets(
+    actions.publish(
         access_token=access_token,
         asset_dir=args.asset_dir,
         app_id=app_id,
