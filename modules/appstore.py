@@ -307,6 +307,50 @@ def get_info_localizations(
     )["data"]
 
 
+def create_info_localization(
+    info_id: str,
+    locale: str,
+    info_localization_attributes: InfoLocalizationAttributes,
+    access_token: str,
+):
+    """Creates a new app store info localization."""
+    return fetch(
+        path=f"/appInfoLocalizations",
+        method=FetchMethod.POST,
+        access_token=access_token,
+        data={
+            "data": {
+                "attributes": {"locale": locale, **info_localization_attributes},
+                "relationships": {
+                    "appInfo": {"data": {"id": info_id, "type": "appInfos"}}
+                },
+                "type": "appInfoLocalizations",
+            }
+        },
+    )["data"]
+
+
+def update_info_localization(
+    info_localization_id: str,
+    info_localization_attributes: InfoLocalizationAttributes,
+    access_token: str,
+):
+    """Updates the meta data for the specified App Info Localization.
+    Some data fields require the App Version to be in an editable state."""
+    return fetch(
+        path=f"/appInfoLocalizations/{info_localization_id}",
+        method=FetchMethod.PATCH,
+        access_token=access_token,
+        data={
+            "data": {
+                "id": info_localization_id,
+                "attributes": info_localization_attributes,
+                "type": "appInfoLocalizations",
+            }
+        },
+    )["data"]
+
+
 def create_version(
     app_id: str,
     platform: Union[Platform, str],  # pylint: disable=unsubscriptable-object
@@ -404,6 +448,17 @@ def get_version_live(
         return versions[0]
 
 
+def get_version_localizations(
+    version_id: str,
+    access_token: str,
+):
+    return fetch(
+        path=f"/appStoreVersions/{version_id}/appStoreVersionLocalizations",
+        method=FetchMethod.GET,
+        access_token=access_token,
+    )["data"]
+
+
 def create_version_localization(
     version_id: str,
     locale: str,
@@ -426,17 +481,6 @@ def create_version_localization(
                 "type": "appStoreVersionLocalizations",
             }
         },
-    )["data"]
-
-
-def get_version_localizations(
-    version_id: str,
-    access_token: str,
-):
-    return fetch(
-        path=f"/appStoreVersions/{version_id}/appStoreVersionLocalizations",
-        method=FetchMethod.GET,
-        access_token=access_token,
     )["data"]
 
 
