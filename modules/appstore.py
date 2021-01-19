@@ -9,7 +9,7 @@ from enum import Enum, auto
 from .print_util import json_term, color_term
 
 # TODO: remove pylint "disable" directives when pylint supports python 3.9 completely
-from typing import TypedDict, Optional, Union, List
+from typing import TypedDict, Optional, Union, List, Literal, Sequence
 
 APPSTORE_URI_ROOT = "https://api.appstoreconnect.apple.com/v1"
 APPSTORE_AUDIENCE = "appstoreconnect-v1"
@@ -30,6 +30,12 @@ class Platform(Enum):
     IOS = auto()
     MAC_OS = auto()
     TV_OS = auto()
+
+
+class ReleaseType(Enum):
+    MANUAL = auto()
+    AFTER_APPROVAL = auto()
+    SCHEDULED = auto()
 
 
 class VersionState(Enum):
@@ -86,6 +92,15 @@ class InfoLocalizationAttributes(TypedDict):  # pylint: disable=inherit-non-clas
     subtitle: Optional[str]  # pylint: disable=unsubscriptable-object
 
 
+class VersionAttributes(TypedDict):  # pylint: disable=inherit-non-class
+    copyright: Optional[str]  # pylint: disable=unsubscriptable-object
+    earliestReleaseDate: Optional[str]  # pylint: disable=unsubscriptable-object
+    releaseType: Optional[str]  # pylint: disable=unsubscriptable-object
+    usesIdfa: Optional[bool]  # pylint: disable=unsubscriptable-object
+    versionString: Optional[str]  # pylint: disable=unsubscriptable-object
+    downloadable: Optional[bool]  # pylint: disable=unsubscriptable-object
+
+
 class VersionLocalizationAttributes(TypedDict):  # pylint: disable=inherit-non-class
     description: Optional[str]  # pylint: disable=unsubscriptable-object
     keywords: Optional[str]  # pylint: disable=unsubscriptable-object
@@ -95,23 +110,28 @@ class VersionLocalizationAttributes(TypedDict):  # pylint: disable=inherit-non-c
     whatsNew: Optional[str]  # pylint: disable=unsubscriptable-object
 
 
+def __name(x: Union[Enum, str]):  # pylint: disable=unsubscriptable-object
+    return x.name if isinstance(x, Enum) else x
+
+
+def __names(
+    x_list: Sequence[Union[Enum, str]]  # pylint: disable=unsubscriptable-object
+):
+    return (__name(x) for x in x_list)
+
+
 def version_state_is_editable(
     version_state: Union[VersionState, str]  # pylint: disable=unsubscriptable-object
 ) -> bool:
     """Test whether or not the version state is 'editable' in the App Store."""
-    if type(version_state) is VersionState:
-        return version_state in editable_version_states
-    else:
-        return version_state in (x.name for x in editable_version_states)
+    return __name(version_state) in __names(editable_version_states)
 
 
 def version_state_is_live(
     version_state: Union[VersionState, str]  # pylint: disable=unsubscriptable-object
 ) -> bool:
     """Test whether or not the version state is 'live' in the App Store."""
-    return (
-        version_state == live_version_state or version_state == live_version_state.name
-    )
+    return __name(version_state) == __name(live_version_state)
 
 
 def create_access_token(issuer_id: str, key_id: str, key: str) -> str:
@@ -132,9 +152,8 @@ def create_access_token(issuer_id: str, key_id: str, key: str) -> str:
     return access_token
 
 
-def fetch(path: str, method: FetchMethod, access_token: str, post_data=None):
+def fetch(path: str, method: FetchMethod, access_token: str, data=None):
     headers = {"Authorization": f"Bearer {access_token}"}
-    response = {}
 
     url = APPSTORE_URI_ROOT + path if path.startswith("/") else path
 
@@ -143,17 +162,17 @@ def fetch(path: str, method: FetchMethod, access_token: str, post_data=None):
             f"{colorama.Fore.GREEN}appstore.fetch: {method.name} {colorama.Fore.MAGENTA}{url}\n"
         )
         + color_term(f"{colorama.Fore.BLUE}request body:\n")
-        + json_term(post_data)
+        + json_term(data)
     )
 
     if method == FetchMethod.GET:
         response = requests.get(url, headers=headers)
     elif method == FetchMethod.POST:
         headers["Content-Type"] = "application/json"
-        response = requests.post(url=url, headers=headers, data=json.dumps(post_data))
+        response = requests.post(url=url, headers=headers, data=json.dumps(data))
     elif method == FetchMethod.PATCH:
         headers["Content-Type"] = "application/json"
-        response = requests.patch(url=url, headers=headers, data=json.dumps(post_data))
+        response = requests.patch(url=url, headers=headers, data=json.dumps(data))
 
     content_type = response.headers["content-type"]
 
@@ -161,13 +180,13 @@ def fetch(path: str, method: FetchMethod, access_token: str, post_data=None):
         result = response.json()
     elif content_type == "application/a-gzip":
         # TODO implement stream decompress
-        data_gz = b""
+        zipped_data = b""
         for chunk in response.iter_content(1024 * 1024):
             if chunk:
-                data_gz = data_gz + chunk
+                zipped_data += chunk
 
-        data = gzip.decompress(data_gz)
-        result = data.decode("utf-8")
+        unzipped_data = gzip.decompress(zipped_data)
+        result = unzipped_data.decode("utf-8")
     else:
         result = response
 
@@ -189,9 +208,8 @@ def get_categories(
     access_token: str,
     platforms: PlatformList = list(Platform),
 ):
-    platforms = [x.name if type(x) is Platform else x for x in platforms]
     return fetch(
-        path=f"/appCategories?filter[platforms]={','.join(platforms)}&exists[parent]=false&include=subcategories",
+        path=f"/appCategories?filter[platforms]={','.join(__names(platforms))}&exists[parent]=false&include=subcategories",
         method=FetchMethod.GET,
         access_token=access_token,
     )["data"]
@@ -248,8 +266,7 @@ def get_infos(
         access_token=access_token,
     )["data"]
 
-    states = [x.name if type(x) is VersionState else x for x in states]
-    return [v for v in versions if v["attributes"]["appStoreState"] in states]
+    return [v for v in versions if v["attributes"]["appStoreState"] in __names(states)]
 
 
 def update_info(
@@ -259,14 +276,14 @@ def update_info(
 ):
     """Update the non-localized AppInfo data."""
     relationships = {}
-    for k in info_attributes:
-        relationships[k] = {"data": {"id": info_attributes[k], "type": "appCategories"}}
+    for k, v in info_attributes.items():
+        relationships[k] = {"data": {"id": v, "type": "appCategories"}}
 
     return fetch(
         path=f"/appInfos/{info_id}",
         method=FetchMethod.PATCH,
         access_token=access_token,
-        post_data={
+        data={
             "data": {
                 "id": info_id,
                 "relationships": relationships,
@@ -290,7 +307,7 @@ def get_info_localizations(
 
 def create_version(
     app_id: str,
-    platform: str,
+    platform: Union[Platform, str],  # pylint: disable=unsubscriptable-object
     version_string: str,
     access_token: str,
 ):
@@ -299,10 +316,33 @@ def create_version(
         path=f"/appStoreVersions/",
         method=FetchMethod.POST,
         access_token=access_token,
-        post_data={
+        data={
             "data": {
-                "attributes": {"platform": platform, "versionString": version_string},
+                "attributes": {
+                    "platform": __name(platform),
+                    "versionString": version_string,
+                },
                 "relationships": {"app": {"data": {"id": app_id, "type": "apps"}}},
+                "type": "appStoreVersions",
+            }
+        },
+    )["data"]
+
+
+def update_version(
+    version_id: str,
+    version_attributes: VersionAttributes,
+    access_token: str,
+):
+    """Update an app version."""
+    return fetch(
+        path=f"/appStoreVersions/{version_id}",
+        method=FetchMethod.PATCH,
+        access_token=access_token,
+        data={
+            "data": {
+                "id": version_id,
+                "attributes": version_attributes,
                 "type": "appStoreVersions",
             }
         },
@@ -322,14 +362,11 @@ def get_versions(
         access_token=access_token,
     )["data"]
 
-    platforms = [x.name if type(x) is Platform else x for x in platforms]
-    states = [x.name if type(x) is VersionState else x for x in states]
-
     return [
         v
         for v in versions
-        if v["attributes"]["platform"] in platforms
-        and v["attributes"]["appStoreState"] in states
+        if v["attributes"]["platform"] in __names(platforms)
+        and v["attributes"]["appStoreState"] in __names(states)
     ]
 
 
@@ -376,7 +413,7 @@ def create_version_localization(
         path=f"/appStoreVersionLocalizations",
         method=FetchMethod.POST,
         access_token=access_token,
-        post_data={
+        data={
             "data": {
                 "attributes": {"locale": locale, **localization_attributes},
                 "relationships": {
@@ -412,7 +449,7 @@ def update_version_localization(
         path=f"/appStoreVersionLocalizations/{localization_id}",
         method=FetchMethod.PATCH,
         access_token=access_token,
-        post_data={
+        data={
             "data": {
                 "id": localization_id,
                 "attributes": localization_attributes,

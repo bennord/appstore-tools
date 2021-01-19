@@ -526,10 +526,12 @@ def publish_assets(
     app_id: str,
     bundle_id: str,
     platform: Union[appstore.Platform, str],  # pylint: disable=unsubscriptable-object
+    allow_create: bool,
     version_string: str,
+    update_version_string: bool,
 ):
-    """Publish all the app meta data app store, using the fist editable app version.
-    If none is found, a new version will be created for the specified target platform."""
+    """Publish all the app meta data app store, using any editable app versions found.
+    If none are found, a new version can be created for the specified target platform."""
     print(
         color_term(
             colorama.Fore.GREEN
@@ -559,7 +561,7 @@ def publish_assets(
         )
     )
 
-    if len(versions) == 0:
+    if len(versions) == 0 and allow_create:
         print(
             f"Creating new version: {colorama.Fore.BLUE}{version_string}{colorama.Fore.RESET}"
         )
@@ -574,6 +576,16 @@ def publish_assets(
     for v in versions:
         version_id = v["id"]
         version_state = v["attributes"]["appStoreState"]
+
+        if update_version_string:
+            version_attributes: appstore.VersionAttributes = {
+                "versionString": version_string,
+            }
+            appstore.update_version(
+                version_id=version_id,
+                version_attributes=version_attributes,
+                access_token=access_token,
+            )
 
         localizations = appstore.get_version_localizations(
             version_id=version_id, access_token=access_token

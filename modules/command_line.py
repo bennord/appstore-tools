@@ -451,8 +451,18 @@ def run_command_line():
     add_platform_argument(publish_group)
     publish_group.add_argument(
         "--version-string",
-        default="APPSTORE.TOOLS",
-        help="Specify the version string to use in the app version.",
+        help="Update the version string in the app store version.",
+    )
+    publish_group.add_argument(
+        "--created-version-string",
+        default="NEW.APP.VERSION",
+        help=f"If {clr_keyword('--version-string')} isn't specified, "
+        + "use this as the version string when creating a new app store version.",
+    )
+    publish_group.add_argument(
+        "--no-create-version",
+        action="store_true",
+        help="Prevent a new app version from being created when no versions are in an editable state.",
     )
     add_authentication_group(publish_parser)
     add_app_id_group(publish_parser)
