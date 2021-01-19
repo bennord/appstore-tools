@@ -544,8 +544,9 @@ def publish_assets(
     # Application directory
     app_dir = os.path.join(asset_dir, bundle_id)
     if not os.path.isdir(app_dir):
-        print(color_term(colorama.Fore.RED + "No app directory found: ") + app_dir)
-        return
+        raise FileNotFoundError(
+            f"App directory {colorama.Fore.CYAN}{app_dir}{colorama.Fore.RESET} not found. "
+        )
 
     # Get Versions
     versions = appstore.get_versions(
@@ -572,20 +573,30 @@ def publish_assets(
             access_token=access_token,
         )
         versions.append(created_version)
+    elif update_version_string:
+        for v in versions:
+            version_id = v["id"]
+            version_state = v["attributes"]["appStoreState"]
 
-    for v in versions:
-        version_id = v["id"]
-        version_state = v["attributes"]["appStoreState"]
-
-        if update_version_string:
             version_attributes: appstore.VersionAttributes = {
                 "versionString": version_string,
             }
+            print(
+                color_term(colorama.Fore.GREEN + "Version ")
+                + color_term(colorama.Fore.BLUE + str(version_state))
+                + ": updating version "
+                + color_term(colorama.Fore.CYAN + str(version_attributes))
+            )
+
             appstore.update_version(
                 version_id=version_id,
                 version_attributes=version_attributes,
                 access_token=access_token,
             )
+
+    for v in versions:
+        version_id = v["id"]
+        version_state = v["attributes"]["appStoreState"]
 
         localizations = appstore.get_version_localizations(
             version_id=version_id, access_token=access_token
