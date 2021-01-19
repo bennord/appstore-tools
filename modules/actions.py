@@ -16,7 +16,7 @@ class Verbosity(Enum):
     FULL = auto()
 
 
-def fetch_screenshot(screenshot_info: object):
+def fetch_screenshot(screenshot_info: dict):
     attr = screenshot_info["attributes"]
     file_ext = os.path.splitext(attr["fileName"])[1]
     width = attr["imageAsset"]["width"]
@@ -286,7 +286,6 @@ def download_info(
     version_states: appstore.VersionStateList = list(appstore.VersionState),
 ):
     """Download the app info to the local app directory."""
-    # Infos
     infos = appstore.get_infos(
         app_id=app_id,
         access_token=access_token,
@@ -350,7 +349,6 @@ def download_version(
     version_states: appstore.VersionStateList = list(appstore.VersionState),
 ):
     """Download the app version localized data and screenshots to the local app directory."""
-    # Versions
     versions = appstore.get_versions(
         app_id=app_id,
         access_token=access_token,
@@ -387,6 +385,8 @@ def download_version(
         loc_attr = loc["attributes"]
         locale = loc_attr["locale"]
         loc_dir = os.path.join(app_dir, locale)
+        screenshots_dir = os.path.join(loc_dir, "screenshots")
+        previews_dir = os.path.join(loc_dir, "previews")
 
         print(
             color_term(
@@ -397,8 +397,10 @@ def download_version(
             )
         )
 
-        # Locale directory
+        # Locale directories
         os.makedirs(name=loc_dir, exist_ok=True)
+        os.makedirs(name=screenshots_dir, exist_ok=True)
+        os.makedirs(name=previews_dir, exist_ok=True)
 
         for key in appstore.VersionLocalizationAttributes.__annotations__.keys():
             content = loc_attr[key] if loc_attr[key] is not None else ""
@@ -414,7 +416,7 @@ def download_version(
         for ss_set in screenshot_sets:
             ss_set_id = ss_set["id"]
             ss_display_type = ss_set["attributes"]["screenshotDisplayType"]
-            ss_set_dir = os.path.join(loc_dir, ss_display_type)
+            ss_set_dir = os.path.join(screenshots_dir, ss_display_type)
 
             # Screenshot Set directory
             os.makedirs(name=ss_set_dir, exist_ok=True)
@@ -444,7 +446,7 @@ def download_version(
         for preview_set in preview_sets:
             preview_set_id = preview_set["id"]
             preview_type = ss_set["attributes"]["previewType"]
-            preview_set_dir = os.path.join(loc_dir, preview_type)
+            preview_set_dir = os.path.join(previews_dir, preview_type)
 
             # Preview Set directory
             os.makedirs(name=preview_set_dir, exist_ok=True)
@@ -569,23 +571,26 @@ def publish_info(
 
             # Load local data from disk
             file_loc_data: appstore.InfoLocalizationAttributes = {}
-            for key in appstore.VersionLocalizationAttributes.__annotations__.keys():
+            for key in appstore.InfoLocalizationAttributes.__annotations__.keys():
                 path = os.path.join(loc_dir, key + ".txt")
                 content = read_txt_file(path)
                 if content is not None:
                     file_loc_data[key] = content  # type: ignore
 
             # Only need to update if there are differences
-            if any(
-                value is not None and value != loc_attr[key]
+            loc_diff_keys = [
+                key
                 for key, value in file_loc_data.items()
-            ):
+                if value is not None and value != loc_attr[key]
+            ]
+            if len(loc_diff_keys) > 0:
                 print(
                     color_term(colorama.Fore.GREEN + "Info ")
                     + color_term(colorama.Fore.BLUE + str(version_state))
                     + color_term(colorama.Fore.GREEN + ", locale ")
                     + color_term(colorama.Fore.BLUE + str(locale))
-                    + ": detected changes... updating"
+                    + ": detected changes... updating "
+                    + color_term(colorama.Fore.CYAN + str(loc_diff_keys))
                 )
                 appstore.update_info_localization(
                     info_localization_id=loc_id,
@@ -695,16 +700,19 @@ def publish_version(
                     file_loc_data[key] = content  # type: ignore
 
             # Only need to update if there are differences
-            if any(
-                value is not None and value != loc_attr[key]
+            loc_diff_keys = [
+                key
                 for key, value in file_loc_data.items()
-            ):
+                if value is not None and value != loc_attr[key]
+            ]
+            if len(loc_diff_keys) > 0:
                 print(
                     color_term(colorama.Fore.GREEN + "Version ")
                     + color_term(colorama.Fore.BLUE + str(version_state))
                     + color_term(colorama.Fore.GREEN + ", locale ")
                     + color_term(colorama.Fore.BLUE + str(locale))
-                    + ": detected changes... updating"
+                    + ": detected changes... updating "
+                    + color_term(colorama.Fore.CYAN + str(loc_diff_keys))
                 )
                 appstore.update_version_localization(
                     localization_id=loc_id,
