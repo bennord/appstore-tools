@@ -69,14 +69,14 @@ editable_version_states = [
 
 live_version_state = VersionState.READY_FOR_SALE
 
-PlatformList = List[Union[Platform, str]]  # pylint: disable=unsubscriptable-object
-
-VersionStateList = List[
+EnumList = Sequence[Union[Enum, str]]  # pylint: disable=unsubscriptable-object
+PlatformList = Sequence[Union[Platform, str]]  # pylint: disable=unsubscriptable-object
+VersionStateList = Sequence[
     Union[VersionState, str]  # pylint: disable=unsubscriptable-object
 ]
 
 
-class InfoAttributes(TypedDict):  # pylint: disable=inherit-non-class
+class InfoAttributes(TypedDict, total=False):  # pylint: disable=inherit-non-class
     primaryCategory: Optional[str]  # pylint: disable=unsubscriptable-object
     primarySubcategoryOne: Optional[str]  # pylint: disable=unsubscriptable-object
     primarySubcategoryTwo: Optional[str]  # pylint: disable=unsubscriptable-object
@@ -85,14 +85,16 @@ class InfoAttributes(TypedDict):  # pylint: disable=inherit-non-class
     secondarySubcategoryTwo: Optional[str]  # pylint: disable=unsubscriptable-object
 
 
-class InfoLocalizationAttributes(TypedDict):  # pylint: disable=inherit-non-class
+class InfoLocalizationAttributes(
+    TypedDict, total=False
+):  # pylint: disable=inherit-non-class
     name: Optional[str]  # pylint: disable=unsubscriptable-object
     privacyPolicyText: Optional[str]  # pylint: disable=unsubscriptable-object
     privacyPolicyUrl: Optional[str]  # pylint: disable=unsubscriptable-object
     subtitle: Optional[str]  # pylint: disable=unsubscriptable-object
 
 
-class VersionAttributes(TypedDict):  # pylint: disable=inherit-non-class
+class VersionAttributes(TypedDict, total=False):  # pylint: disable=inherit-non-class
     copyright: Optional[str]  # pylint: disable=unsubscriptable-object
     earliestReleaseDate: Optional[str]  # pylint: disable=unsubscriptable-object
     releaseType: Optional[str]  # pylint: disable=unsubscriptable-object
@@ -101,7 +103,9 @@ class VersionAttributes(TypedDict):  # pylint: disable=inherit-non-class
     downloadable: Optional[bool]  # pylint: disable=unsubscriptable-object
 
 
-class VersionLocalizationAttributes(TypedDict):  # pylint: disable=inherit-non-class
+class VersionLocalizationAttributes(
+    TypedDict, total=False
+):  # pylint: disable=inherit-non-class
     description: Optional[str]  # pylint: disable=unsubscriptable-object
     keywords: Optional[str]  # pylint: disable=unsubscriptable-object
     marketingUrl: Optional[str]  # pylint: disable=unsubscriptable-object
@@ -114,9 +118,7 @@ def __name(x: Union[Enum, str]):  # pylint: disable=unsubscriptable-object
     return x.name if isinstance(x, Enum) else x
 
 
-def __names(
-    x_list: Sequence[Union[Enum, str]]  # pylint: disable=unsubscriptable-object
-):
+def __names(x_list: EnumList):
     return (__name(x) for x in x_list)
 
 

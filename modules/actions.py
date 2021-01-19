@@ -615,14 +615,14 @@ def publish_assets(
             file_loc_data: appstore.VersionLocalizationAttributes = {}
             for key in appstore.VersionLocalizationAttributes.__annotations__.keys():
                 path = os.path.join(loc_dir, key + ".txt")
-                file_loc_data[key] = read_txt_file(path)
-                if file_loc_data[key] is None:
-                    del file_loc_data[key]
+                content = read_txt_file(path)
+                if content is not None:
+                    file_loc_data[key] = content  # type: ignore
 
             # Only need to update if there are differences
             if any(
-                file_loc_data[key] is not None and file_loc_data[key] != loc_attr[key]
-                for key in file_loc_data.keys()
+                value is not None and value != loc_attr[key]
+                for key, value in file_loc_data.items()
             ):
                 print(
                     color_term(colorama.Fore.GREEN + "Version ")
