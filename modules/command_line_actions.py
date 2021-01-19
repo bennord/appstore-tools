@@ -116,23 +116,20 @@ def download_assets(args):
     access_token = get_access_token(args)
     app_id = get_app_id(args, access_token)
     bundle_id = get_bundle_id(args, access_token)
-    asset_dir = args.asset_dir
-    platforms = [args.platform]
+
     version_states = (
         [args.version_state]
         if args.version_state is not None
         else list(appstore.VersionState)
     )
-    overwrite = args.overwrite
-
     actions.download_assets(
         access_token=access_token,
-        asset_dir=asset_dir,
+        asset_dir=args.asset_dir,
         app_id=app_id,
         bundle_id=bundle_id,
-        platforms=platforms,
+        platforms=[args.platform],
         version_states=version_states,
-        overwrite=overwrite,
+        overwrite=args.overwrite,
     )
 
 
@@ -149,5 +146,5 @@ def publish_assets(args):
         platform=args.platform,
         allow_create=not args.no_create_version,
         version_string=args.version_string or args.created_version_string,
-        update_version_string=args.ersion_string is not None,
+        update_version_string=args.version_string is not None,
     )
