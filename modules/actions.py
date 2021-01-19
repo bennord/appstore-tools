@@ -520,9 +520,91 @@ def download_assets(
     print(color_term(colorama.Fore.GREEN + "Download complete"))
 
 
-def publish_assets(
+def publish_info(
     access_token: str,
-    asset_dir: str,
+    app_dir: str,
+    app_id: str,
+    bundle_id: str,
+    platform: Union[appstore.Platform, str],  # pylint: disable=unsubscriptable-object
+):
+    # Get Infos
+    infos = appstore.get_infos(
+        app_id=app_id,
+        access_token=access_token,
+        states=appstore.editable_version_states,
+    )
+    print(
+        color_term(
+            f"Found {colorama.Fore.CYAN}{len(infos)}{colorama.Fore.RESET} editable app infos."
+        )
+    )
+
+    for info in infos:
+        info_id = info["id"]
+        version_state = info["attributes"]["appStoreState"]
+
+        localizations = appstore.get_info_localizations(
+            info_id=info_id, access_token=access_token
+        )
+
+        for loc in localizations:
+            loc_id = loc["id"]
+            loc_attr = loc["attributes"]
+            locale = loc_attr["locale"]
+            loc_dir = os.path.join(app_dir, locale)
+
+            if not os.path.isdir(loc_dir):
+                print(
+                    color_term(
+                        colorama.Fore.RED + "No app localization directory found: "
+                    )
+                    + loc_dir
+                )
+                continue
+
+            # Normalize all attribute values to strings
+            for key in appstore.InfoLocalizationAttributes.__annotations__.keys():
+                if loc_attr[key] is None:
+                    loc_attr[key] = ""
+
+            # Load local data from disk
+            file_loc_data: appstore.InfoLocalizationAttributes = {}
+            for key in appstore.VersionLocalizationAttributes.__annotations__.keys():
+                path = os.path.join(loc_dir, key + ".txt")
+                content = read_txt_file(path)
+                if content is not None:
+                    file_loc_data[key] = content  # type: ignore
+
+            # Only need to update if there are differences
+            if any(
+                value is not None and value != loc_attr[key]
+                for key, value in file_loc_data.items()
+            ):
+                print(
+                    color_term(colorama.Fore.GREEN + "Info ")
+                    + color_term(colorama.Fore.BLUE + str(version_state))
+                    + color_term(colorama.Fore.GREEN + ", locale ")
+                    + color_term(colorama.Fore.BLUE + str(locale))
+                    + ": detected changes... updating"
+                )
+                appstore.update_info_localization(
+                    info_localization_id=loc_id,
+                    info_localization_attributes=file_loc_data,
+                    access_token=access_token,
+                )
+            else:
+                print(
+                    color_term(colorama.Fore.GREEN + "Info ")
+                    + color_term(colorama.Fore.BLUE + str(version_state))
+                    + color_term(colorama.Fore.GREEN + ", locale ")
+                    + color_term(colorama.Fore.BLUE + str(locale))
+                    + ": no changes... skipping"
+                )
+
+
+def publish_version(
+    access_token: str,
+    app_dir: str,
     app_id: str,
     bundle_id: str,
     platform: Union[appstore.Platform, str],  # pylint: disable=unsubscriptable-object
@@ -530,24 +612,6 @@ def publish_assets(
     version_string: str,
     update_version_string: bool,
 ):
-    """Publish all the app meta data app store, using any editable app versions found.
-    If none are found, a new version can be created for the specified target platform."""
-    print(
-        color_term(
-            colorama.Fore.GREEN
-            + "Publishing assets from local dir: "
-            + colorama.Fore.MAGENTA
-            + asset_dir
-        )
-    )
-
-    # Application directory
-    app_dir = os.path.join(asset_dir, bundle_id)
-    if not os.path.isdir(app_dir):
-        raise FileNotFoundError(
-            f"App directory {colorama.Fore.CYAN}{app_dir}{colorama.Fore.RESET} not found. "
-        )
-
     # Get Versions
     versions = appstore.get_versions(
         app_id=app_id,
@@ -644,8 +708,8 @@ def publish_assets(
                 )
                 appstore.update_version_localization(
                     localization_id=loc_id,
-                    access_token=access_token,
                     localization_attributes=file_loc_data,
+                    access_token=access_token,
                 )
             else:
                 print(
@@ -655,3 +719,51 @@ def publish_assets(
                     + color_term(colorama.Fore.BLUE + str(locale))
                     + ": no changes... skipping"
                 )
+
+
+def publish_assets(
+    access_token: str,
+    asset_dir: str,
+    app_id: str,
+    bundle_id: str,
+    platform: Union[appstore.Platform, str],  # pylint: disable=unsubscriptable-object
+    allow_create: bool,
+    version_string: str,
+    update_version_string: bool,
+):
+    """Publish all the app meta data app store, using any editable app versions found.
+    If none are found, a new version can be created for the specified target platform."""
+    print(
+        color_term(
+            colorama.Fore.GREEN
+            + "Publishing assets from local dir: "
+            + colorama.Fore.MAGENTA
+            + asset_dir
+        )
+    )
+
+    # Application directory
+    app_dir = os.path.join(asset_dir, bundle_id)
+    if not os.path.isdir(app_dir):
+        raise FileNotFoundError(
+            f"App directory {colorama.Fore.CYAN}{app_dir}{colorama.Fore.RESET} not found. "
+        )
+
+    publish_version(
+        access_token=access_token,
+        app_dir=app_dir,
+        app_id=app_id,
+        bundle_id=bundle_id,
+        platform=platform,
+        allow_create=allow_create,
+        version_string=version_string,
+        update_version_string=update_version_string,
+    )
+    publish_info(
+        access_token=access_token,
+        app_dir=app_dir,
+        app_id=app_id,
+        bundle_id=bundle_id,
+        platform=platform,
+    )
+    print(color_term(colorama.Fore.GREEN + "Publish complete"))
