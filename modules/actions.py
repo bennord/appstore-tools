@@ -492,7 +492,7 @@ def download_assets(
         color_term(
             f"{colorama.Fore.CYAN}{bundle_id} "
             + f"{colorama.Fore.BLUE}{app_id} "
-            + f"{colorama.Fore.GREEN}➜ "
+            + f"{colorama.Fore.RESET}-> "
             + f"{colorama.Fore.CYAN}{app_dir}"
         )
     )
