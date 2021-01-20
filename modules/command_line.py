@@ -6,7 +6,7 @@ import modules.appstore as appstore
 import modules.actions as actions
 import requests
 import sys
-from modules.print_util import color_term
+from modules.print_util import print_clr, clr, clr_extra, clr_keyword, clr_usage
 import colorama
 import argparse_color_formatter
 import modules.version as version
@@ -21,14 +21,6 @@ LOGO_ART = """
 |__|__|  _|  _|_____|_| |___|_| |___|    |_| |___|___|_|___|
       |_| |_|                                               
 """
-
-EXTRA_INFO_COLOR = colorama.Style.DIM
-KEYWORD_COLOR = colorama.Style.DIM + colorama.Fore.LIGHTCYAN_EX
-USAGE_COLOR = colorama.Style.DIM + colorama.Fore.CYAN
-
-clr_extra = lambda x: EXTRA_INFO_COLOR + x + colorama.Style.RESET_ALL
-clr_keyword = lambda x: KEYWORD_COLOR + x + colorama.Style.RESET_ALL
-clr_usage = lambda x: USAGE_COLOR + x + colorama.Style.RESET_ALL
 
 
 class PrettyHelpFormatter(argparse_color_formatter.ColorRawDescriptionHelpFormatter):

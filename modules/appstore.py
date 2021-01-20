@@ -6,7 +6,7 @@ import gzip
 import colorama
 import logging
 from enum import Enum, auto
-from .print_util import json_term, color_term
+from .print_util import json_term, clr
 
 # TODO: remove pylint "disable" directives when pylint supports python 3.9 completely
 from typing import TypedDict, Optional, Union, Literal, Sequence
@@ -204,11 +204,11 @@ def fetch(
     url = APPSTORE_URI_ROOT + path if path.startswith("/") else path
 
     logging.debug(
-        color_term(
-            f"{colorama.Fore.GREEN}appstore.fetch: {__name(method)} {colorama.Fore.MAGENTA}{url}\n"
+        clr(
+            f"{colorama.Fore.GREEN}appstore.fetch: {__name(method)} {colorama.Fore.MAGENTA}{url}\n",
+            f"{colorama.Fore.BLUE}request body:\n",
+            json_term(data),
         )
-        + color_term(f"{colorama.Fore.BLUE}request body:\n")
-        + json_term(data)
     )
 
     if not isinstance(method, FetchMethod):
@@ -233,9 +233,7 @@ def fetch(
 
     if content_type == "application/json":
         result = response.json()
-        logging.debug(
-            color_term(f"{colorama.Fore.BLUE}response body:\n") + json_term(result)
-        )
+        logging.debug(clr(f"{colorama.Fore.BLUE}response body:\n", json_term(result)))
     elif content_type == "application/a-gzip":
         # TODO implement stream decompress
         zipped_data = b""

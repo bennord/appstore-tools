@@ -6,7 +6,7 @@ import os
 import logging
 import requests
 import hashlib
-from modules.print_util import color_term, json_term
+from modules.print_util import print_clr, clr, json_term
 from typing import Union, Optional
 from enum import Enum, auto
 
@@ -59,15 +59,14 @@ def list_categories(
 
     if verbosity == Verbosity.SHORT:
         for x in categories:
-            print(
-                x["id"]
-                + color_term(
-                    colorama.Fore.LIGHTBLACK_EX
-                    + f' {{{",".join(x["attributes"]["platforms"])}}}'
-                )
+            print_clr(
+                x["id"],
+                colorama.Fore.LIGHTBLACK_EX
+                + f' {{{",".join(x["attributes"]["platforms"])}}}',
             )
+
             for sub in x["relationships"]["subcategories"]["data"]:
-                print(color_term(colorama.Style.DIM + f'  {sub["id"]}'))
+                print_clr(colorama.Style.DIM + f'  {sub["id"]}')
 
     else:
         print(json_term(categories))
@@ -171,7 +170,7 @@ def list_screenshots(
     verbosity: Verbosity = Verbosity.SHORT,
 ):
     """List screenhots for each screenshot set of each app version."""
-    logging.info(color_term(colorama.Fore.GREEN + "app_id: ") + str(app_id))
+    logging.info(clr(colorama.Fore.GREEN + "app_id: ", str(app_id)))
 
     versions = appstore.get_versions(
         app_id=app_id, access_token=access_token, platforms=platforms, states=states
@@ -179,10 +178,8 @@ def list_screenshots(
     for version in versions[:version_limit]:
         version_id = version["id"]
         version_state = version["attributes"]["appStoreState"]
-        print(
-            color_term(
-                f"{colorama.Fore.GREEN}version: {colorama.Fore.BLUE}{version_id} {version_state}"
-            )
+        print_clr(
+            f"{colorama.Fore.GREEN}version: {colorama.Fore.BLUE}{version_id} {version_state}"
         )
 
         localizations = appstore.get_version_localizations(
@@ -194,9 +191,9 @@ def list_screenshots(
             screenshot_sets = appstore.get_screenshot_sets(
                 localization_id=loc_id, access_token=access_token
             )
-            print(
-                color_term(colorama.Fore.GREEN + f"loc_id {loc_id}: ")
-                + f"Found {colorama.Fore.CYAN}{len(screenshot_sets)}{colorama.Fore.RESET} screenshot sets."
+            print_clr(
+                f"{colorama.Fore.GREEN}loc_id {loc_id}: ",
+                f"Found {colorama.Fore.CYAN}{len(screenshot_sets)}{colorama.Fore.RESET} screenshot sets.",
             )
 
             for screenshot_set in screenshot_sets:
@@ -241,7 +238,7 @@ def list_previews(
     version_limit: Optional[int],  # pylint: disable=unsubscriptable-object
 ):
     """List previews for each preview set of each app version."""
-    logging.info(color_term(colorama.Fore.GREEN + "app_id: ") + str(app_id))
+    logging.info(clr(colorama.Fore.GREEN + "app_id: ", str(app_id)))
 
     versions = appstore.get_versions(
         app_id=app_id, access_token=access_token, platforms=platforms, states=states
@@ -249,10 +246,8 @@ def list_previews(
     for version in versions[:version_limit]:
         version_id = version["id"]
         version_state = version["attributes"]["appStoreState"]
-        print(
-            color_term(
-                f"{colorama.Fore.GREEN}version: {colorama.Fore.BLUE}{version_id} {version_state}"
-            )
+        print_clr(
+            f"{colorama.Fore.GREEN}version: {colorama.Fore.BLUE}{version_id} {version_state}"
         )
 
         localizations = appstore.get_version_localizations(
@@ -264,9 +259,9 @@ def list_previews(
             preview_sets = appstore.get_preview_sets(
                 localization_id=loc_id, access_token=access_token
             )
-            print(
-                color_term(colorama.Fore.GREEN + f"loc_id {loc_id}: ")
-                + f"Found {colorama.Fore.CYAN}{len(preview_sets)}{colorama.Fore.RESET} preview sets."
+            print_clr(
+                f"{colorama.Fore.GREEN}loc_id {loc_id}: ",
+                f"Found {colorama.Fore.CYAN}{len(preview_sets)}{colorama.Fore.RESET} preview sets.",
             )
 
             for preview_set in preview_sets:
@@ -275,7 +270,7 @@ def list_previews(
                 preview_set = appstore.get_previews(
                     preview_set_id=preview_set_id, access_token=access_token
                 )
-                print(color_term(colorama.Fore.GREEN + f"previewType: ") + preview_type)
+                print_clr(f"{colorama.Fore.GREEN}previewType: ", preview_type)
                 print(json_term(preview_set))
 
 
@@ -296,18 +291,16 @@ def download_info(
         message = f"No app infos found"
         if version_states != list(appstore.VersionState):
             message += f": {colorama.Fore.CYAN}{version_states}{colorama.Fore.RESET}"
-        raise appstore.ResourceNotFoundException(color_term(message))
+        raise appstore.ResourceNotFoundException(clr(message))
 
     info = infos[0]
     info_id = info["id"]
     info_state = info["attributes"]["appStoreState"]
 
-    print(
-        color_term(
-            f"{colorama.Fore.GREEN}Downloading app info: "
-            + f"{colorama.Fore.BLUE}{info_id}{colorama.Fore.RESET}, "
-            + f"{colorama.Fore.CYAN}{info_state}{colorama.Fore.RESET}"
-        )
+    print_clr(
+        f"{colorama.Fore.GREEN}Downloading app info: ",
+        f"{colorama.Fore.BLUE}{info_id}{colorama.Fore.RESET}, ",
+        f"{colorama.Fore.CYAN}{info_state}",
     )
 
     # Info Localizations
@@ -321,13 +314,10 @@ def download_info(
         locale = loc_attr["locale"]
         loc_dir = os.path.join(app_dir, locale)
 
-        print(
-            color_term(
-                colorama.Fore.GREEN
-                + "Locale: "
-                + f"{colorama.Fore.MAGENTA}{locale}{colorama.Fore.RESET} "
-                + f"{colorama.Fore.BLUE}{loc_id}{colorama.Fore.RESET}"
-            )
+        print_clr(
+            f"{colorama.Fore.GREEN}Locale: ",
+            f"{colorama.Fore.MAGENTA}{locale} ",
+            f"{colorama.Fore.BLUE}{loc_id}",
         )
 
         # Locale directory
@@ -360,20 +350,18 @@ def download_version(
         message = f"No app version found: {colorama.Fore.CYAN}{platforms}{colorama.Fore.RESET}"
         if version_states != list(appstore.VersionState):
             message += f", {colorama.Fore.CYAN}{version_states}{colorama.Fore.RESET}"
-        raise appstore.ResourceNotFoundException(color_term(message))
+        raise appstore.ResourceNotFoundException(clr(message))
 
     version = versions[0]
     version_id = version["id"]
     version_state = version["attributes"]["appStoreState"]
     version_platform = version["attributes"]["platform"]
 
-    print(
-        color_term(
-            f"{colorama.Fore.GREEN}Downloading app version: "
-            + f"{colorama.Fore.BLUE}{version_id}{colorama.Fore.RESET}, "
-            + f"{colorama.Fore.CYAN}{version_platform}{colorama.Fore.RESET}, "
-            + f"{colorama.Fore.CYAN}{version_state}{colorama.Fore.RESET}"
-        )
+    print_clr(
+        f"{colorama.Fore.GREEN}Downloading app version: ",
+        f"{colorama.Fore.BLUE}{version_id}{colorama.Fore.RESET}, ",
+        f"{colorama.Fore.CYAN}{version_platform}, ",
+        f"{colorama.Fore.CYAN}{version_state}",
     )
 
     # Version Localizations
@@ -389,13 +377,10 @@ def download_version(
         screenshots_dir = os.path.join(loc_dir, "screenshots")
         previews_dir = os.path.join(loc_dir, "previews")
 
-        print(
-            color_term(
-                colorama.Fore.GREEN
-                + "Locale: "
-                + f"{colorama.Fore.MAGENTA}{locale}{colorama.Fore.RESET} "
-                + f"{colorama.Fore.BLUE}{loc_id}{colorama.Fore.RESET}"
-            )
+        print_clr(
+            f"{colorama.Fore.GREEN}Locale: ",
+            f"{colorama.Fore.MAGENTA}{locale} ",
+            f"{colorama.Fore.BLUE}{loc_id}",
         )
 
         # Locale directories
@@ -438,7 +423,7 @@ def download_version(
                         content=response.content,
                     )
                 else:
-                    print(color_term(colorama.Fore.RED + "FAILED"))
+                    print_clr(colorama.Fore.RED + "FAILED")
 
         preview_sets = appstore.get_preview_sets(
             localization_id=loc_id, access_token=access_token
@@ -462,9 +447,7 @@ def download_version(
                 print(preview_path)
 
                 json_term(preview)
-                print(
-                    color_term(colorama.Fore.RED + "PREVIEW DOWNLOAD NOT IMPLEMENTED")
-                )
+                print_clr(colorama.Fore.RED + "PREVIEW DOWNLOAD NOT IMPLEMENTED")
                 # TODO: add fetch_preview functionality similar to screenshots
 
                 # response = fetch_screenshot(screenshot)
@@ -474,7 +457,7 @@ def download_version(
                 #         content=response.content,
                 #     )
                 # else:
-                #     print(color_term(colorama.Fore.RED + "FAILED"))
+                #     print_clr(colorama.Fore.RED + "FAILED")
 
 
 def download(
@@ -489,13 +472,11 @@ def download(
     """Download all the app meta data to the local app directory."""
     app_dir = os.path.join(asset_dir, bundle_id)
 
-    print(
-        color_term(
-            f"{colorama.Fore.CYAN}{bundle_id} "
-            + f"{colorama.Fore.BLUE}{app_id} "
-            + f"{colorama.Fore.RESET}-> "
-            + f"{colorama.Fore.CYAN}{app_dir}"
-        )
+    print_clr(
+        f"{colorama.Fore.CYAN}{bundle_id} ",
+        f"{colorama.Fore.BLUE}{app_id} ",
+        f"-> ",
+        f"{colorama.Fore.CYAN}{app_dir}",
     )
 
     # App
@@ -520,13 +501,11 @@ def download(
         platforms=platforms,
         version_states=version_states,
     )
-    print(color_term(colorama.Fore.GREEN + "Download complete"))
+    print_clr(colorama.Fore.GREEN + "Download complete")
 
 
 def print_locale_status(locale: str, locale_color: str, status: str):
-    print(
-        color_term(f"  {locale_color}{locale:5}{colorama.Style.RESET_ALL} - {status}")
-    )
+    print_clr(f"  {locale_color}{locale:5}{colorama.Style.RESET_ALL} - {status}")
 
 
 def publish_screenshot(
@@ -657,10 +636,8 @@ def publish_info(
         access_token=access_token,
         states=appstore.editable_version_states,
     )
-    print(
-        color_term(
-            f"Found {colorama.Fore.CYAN}{len(infos)}{colorama.Fore.RESET} editable app infos."
-        )
+    print_clr(
+        f"Found {colorama.Fore.CYAN}{len(infos)}{colorama.Fore.RESET} editable app infos."
     )
 
     file_locales = [
@@ -671,10 +648,10 @@ def publish_info(
         info_id = info["id"]
         version_state = info["attributes"]["appStoreState"]
 
-        print(
-            color_term(colorama.Fore.GREEN + "AppInfo ")
-            + color_term(colorama.Fore.BLUE + f"{info_id} ")
-            + color_term(colorama.Fore.CYAN + f"{version_state}")
+        print_clr(
+            colorama.Fore.GREEN + "AppInfo ",
+            colorama.Fore.BLUE + f"{info_id} ",
+            colorama.Fore.CYAN + f"{version_state}",
         )
 
         localizations = appstore.get_info_localizations(
@@ -755,11 +732,9 @@ def publish_version(
         platforms=[platform],
         states=appstore.editable_version_states,
     )
-    print(
-        color_term(
-            f"Found {colorama.Fore.CYAN}{len(versions)}{colorama.Fore.RESET} editable app versions "
-            + f"for {colorama.Fore.CYAN}{platform}{colorama.Fore.RESET}."
-        )
+    print_clr(
+        f"Found {colorama.Fore.CYAN}{len(versions)}{colorama.Fore.RESET} editable app versions ",
+        f"for {colorama.Fore.CYAN}{platform}{colorama.Fore.RESET}.",
     )
 
     if len(versions) == 0 and allow_create_version:
@@ -781,11 +756,11 @@ def publish_version(
             version_attributes: appstore.VersionAttributes = {
                 "versionString": version_string,
             }
-            print(
-                color_term(colorama.Fore.GREEN + "Version ")
-                + color_term(colorama.Fore.BLUE + str(version_state))
-                + ": updating version "
-                + color_term(colorama.Fore.CYAN + str(version_attributes))
+            print_clr(
+                f"{colorama.Fore.GREEN}Version ",
+                f"{colorama.Fore.BLUE}{version_state} ",
+                f": updating version ",
+                f"{colorama.Fore.CYAN}{version_attributes}",
             )
 
             appstore.update_version(
@@ -802,10 +777,10 @@ def publish_version(
         version_id = v["id"]
         version_state = v["attributes"]["appStoreState"]
 
-        print(
-            color_term(colorama.Fore.GREEN + "Version ")
-            + color_term(colorama.Fore.BLUE + f"{version_id} ")
-            + color_term(colorama.Fore.CYAN + f"{version_state}")
+        print_clr(
+            f"{colorama.Fore.GREEN}Version ",
+            f"{colorama.Fore.BLUE}{version_id} ",
+            f"{colorama.Fore.CYAN}{version_state} ",
         )
 
         localizations = appstore.get_version_localizations(
@@ -901,11 +876,7 @@ def publish(
 ):
     """Publish all the app meta data app store, using any editable app versions found.
     If none are found, a new version can be created for the specified target platform."""
-    print(
-        color_term(
-            "Publishing assets from directory: " + colorama.Fore.CYAN + asset_dir
-        )
-    )
+    print_clr("Publishing assets from directory: ", colorama.Fore.CYAN + asset_dir)
 
     # Application directory
     app_dir = os.path.join(asset_dir, bundle_id)
@@ -933,4 +904,4 @@ def publish(
         bundle_id=bundle_id,
         platform=platform,
     )
-    print(color_term(colorama.Fore.GREEN + "Publish complete"))
+    print_clr(colorama.Fore.GREEN + "Publish complete")
