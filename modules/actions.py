@@ -53,7 +53,11 @@ def print_locale_status(locale: str, color: str, status: str):
 
 
 def print_screenshot_set_status(display_type: str, color: str, status: str):
-    print_clr(f"    {color}{display_type:5}{colorama.Style.RESET_ALL} - {status}")
+    print_clr(f"    {color}{display_type}{colorama.Style.RESET_ALL} - {status}")
+
+
+def print_screenshot_status(file_name: str, color: str, status: str):
+    print_clr(f"      {color}{file_name}{colorama.Style.RESET_ALL} - {status}")
 
 
 def list_categories(
@@ -210,24 +214,43 @@ def list_screenshots(
                 screenshots = appstore.get_screenshots(
                     screenshot_set_id=ss_set_id, access_token=access_token
                 )
-                screenshots = (
-                    screenshots
-                    if verbosity == Verbosity.FULL
-                    else [
-                        {
-                            "id": x["id"],
-                            "fileSize": x["attributes"]["fileSize"],
-                            "fileName": x["attributes"]["fileName"],
-                            "sourceFileChecksum": x["attributes"]["sourceFileChecksum"],
-                            "templateUrl": x["attributes"]["imageAsset"]["templateUrl"],
-                            "width": x["attributes"]["imageAsset"]["width"],
-                            "height": x["attributes"]["imageAsset"]["height"],
-                        }
+                if verbosity == Verbosity.SHORT:
+                    screenshots = [x["attributes"]["fileName"] for x in screenshots]
+                elif verbosity == Verbosity.LONG:
+                    screenshots = [
+                        (
+                            {
+                                "id": x["id"],
+                                "fileSize": x["attributes"]["fileSize"],
+                                "fileName": x["attributes"]["fileName"],
+                                "sourceFileChecksum": x["attributes"][
+                                    "sourceFileChecksum"
+                                ],
+                                "templateUrl": x["attributes"]["imageAsset"][
+                                    "templateUrl"
+                                ],
+                                "width": x["attributes"]["imageAsset"]["width"],
+                                "height": x["attributes"]["imageAsset"]["height"],
+                                "assetDeliveryState": x["attributes"][
+                                    "assetDeliveryState"
+                                ]["state"],
+                            }
+                            if x["attributes"]["assetDeliveryState"]["state"]
+                            == appstore.MediaAssetState.COMPLETE
+                            else {
+                                "id": x["id"],
+                                "fileSize": x["attributes"]["fileSize"],
+                                "fileName": x["attributes"]["fileName"],
+                                "sourceFileChecksum": x["attributes"][
+                                    "sourceFileChecksum"
+                                ],
+                                "assetDeliveryState": x["attributes"][
+                                    "assetDeliveryState"
+                                ]["state"],
+                            }
+                        )
                         for x in screenshots
                     ]
-                    if verbosity == Verbosity.LONG
-                    else [x["attributes"]["fileName"] for x in screenshots]
-                )
                 print(
                     json_term(
                         {
@@ -525,6 +548,11 @@ def publish_screenshot(
     file_hash = hashlib.md5()
 
     # Create
+    print_screenshot_status(
+        file_name,
+        colorama.Fore.CYAN,
+        "reserving asset",
+    )
     screenshot = appstore.create_screenshot(
         screenshot_set_id=screenshot_set_id,
         file_name=file_name,
@@ -550,9 +578,19 @@ def publish_screenshot(
             file_chunk = file.read(length)
 
         file_hash.update(file_chunk)
+        print_screenshot_status(
+            file_name,
+            colorama.Fore.CYAN,
+            f"uploading chunk (offset: {offset}, length: {length})",
+        )
         requests.request(method=method, url=url, headers=headers, data=file_chunk)
 
     # Commit
+    print_screenshot_status(
+        file_name,
+        colorama.Fore.CYAN,
+        "commiting upload",
+    )
     checksum = file_hash.hexdigest()
     screenshot = appstore.update_screenshot(
         screenshot_id=screenshot_id,
@@ -574,6 +612,9 @@ def screenshot_checksum_matches(screenshot, screenshot_set_dir: str) -> bool:
 
     with open(file_path, "rb") as file:
         checksum = hashlib.md5(file.read()).hexdigest()
+        print(
+            f"file: {file_name}, checksum {checksum}, appstore_checksum {appstore_checksum}"
+        )
         return checksum == appstore_checksum
 
 
@@ -581,15 +622,29 @@ def publish_screenshots(
     access_token: str,
     screenshot_set_dir: str,
     screenshot_set_id: str,
+    display_type: str,
 ):
+    print_screenshot_set_status(display_type, colorama.Fore.CYAN, "checking")
+
     # Delete outdated screenshots
     screenshots = appstore.get_screenshots(
         screenshot_set_id=screenshot_set_id, access_token=access_token
     )
     for screenshot in screenshots:
-        if not screenshot_checksum_matches(
+        if screenshot_checksum_matches(
             screenshot=screenshot, screenshot_set_dir=screenshot_set_dir
         ):
+            print_screenshot_status(
+                screenshot["attributes"]["fileName"],
+                colorama.Fore.CYAN,
+                "checksum matched",
+            )
+        else:
+            print_screenshot_status(
+                screenshot["attributes"]["fileName"],
+                colorama.Fore.CYAN,
+                "checksum changed: deleting",
+            )
             appstore.delete_screenshot(
                 screenshot_id=screenshot["id"], access_token=access_token
             )
@@ -615,11 +670,12 @@ def publish_screenshots(
         )
 
     # Reorder the screenshots
+    print_screenshot_set_status(display_type, colorama.Fore.CYAN, "sorting screenshots")
     screenshots = appstore.get_screenshots(
         screenshot_set_id=screenshot_set_id, access_token=access_token
     )
+    screenshots.sort(key=lambda x: x["attributes"]["fileName"])
     screenshot_ids = [x["id"] for x in screenshots]
-    screenshot_ids.sort()
     appstore.update_screenshot_order(
         screenshot_set_id=screenshot_set_id,
         screenshot_ids=screenshot_ids,
@@ -694,6 +750,7 @@ def publish_screenshot_sets(
             access_token=access_token,
             screenshot_set_dir=ss_set_dir,
             screenshot_set_id=ss_set_id,
+            display_type=display_type,
         )
 
 

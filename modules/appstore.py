@@ -613,7 +613,7 @@ def create_screenshot_set(
                     "appStoreVersionLocalization": {
                         "data": {
                             "id": localization_id,
-                            "type": " appStoreVersionLocalizations",
+                            "type": "appStoreVersionLocalizations",
                         }
                     }
                 },
@@ -641,8 +641,8 @@ def update_screenshot_order(
     access_token: str,
 ):
     """Update the order of the screenshots in a screenshot set."""
-    return fetch(
-        method=FetchMethod.POST,
+    fetch(
+        method=FetchMethod.PATCH,
         path=f"/appScreenshotSets/{screenshot_set_id}/relationships/appScreenshots",
         access_token=access_token,
         data={
@@ -650,7 +650,7 @@ def update_screenshot_order(
                 {"id": ss_id, "type": "appScreenshots"} for ss_id in screenshot_ids
             ]
         },
-    )["data"]
+    )
 
 
 def get_screenshots(
@@ -695,7 +695,7 @@ def create_screenshot(
                     "appScreenshotSet": {
                         "data": {
                             "id": screenshot_set_id,
-                            "type": " appScreenshotSets",
+                            "type": "appScreenshotSets",
                         }
                     }
                 },
