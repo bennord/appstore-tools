@@ -99,6 +99,13 @@ class ScreenshotDisplayType(Enum):
     IMESSAGE_APP_IPAD_97 = auto()
 
 
+class MediaAssetState(Enum):
+    AWAITING_UPLOAD = auto()
+    UPLOAD_COMPLETE = auto()
+    COMPLETE = auto()
+    FAILED = auto()
+
+
 EnumList = Sequence[Union[Enum, str]]  # pylint: disable=unsubscriptable-object
 PlatformList = Sequence[Union[Platform, str]]  # pylint: disable=unsubscriptable-object
 VersionStateList = Sequence[
@@ -184,20 +191,33 @@ def create_access_token(issuer_id: str, key_id: str, key: str) -> str:
     return access_token
 
 
-def fetch(path: str, method: FetchMethod, access_token: str, data=None):
+def fetch(
+    method: Union[FetchMethod, str],  # pylint: disable=unsubscriptable-object
+    path: str,
+    access_token: str,
+    headers: dict = {},
+    data=None,
+):
     """Fetch a URL resource via the AppStore connect api."""
-    headers = {"Authorization": f"Bearer {access_token}"}
+    headers = {"Authorization": f"Bearer {access_token}", **headers}
 
     url = APPSTORE_URI_ROOT + path if path.startswith("/") else path
 
     logging.debug(
         color_term(
-            f"{colorama.Fore.GREEN}appstore.fetch: {method.name} {colorama.Fore.MAGENTA}{url}\n"
+            f"{colorama.Fore.GREEN}appstore.fetch: {__name(method)} {colorama.Fore.MAGENTA}{url}\n"
         )
         + color_term(f"{colorama.Fore.BLUE}request body:\n")
         + json_term(data)
     )
 
+    if not isinstance(method, FetchMethod):
+        try:
+            method = FetchMethod[method]
+        except KeyError:
+            raise ValueError(
+                f"{method} is not a valid FetchMethod. Options are {list(FetchMethod)}"
+            )
     if method == FetchMethod.GET:
         response = requests.get(url=url, headers=headers)
     elif method == FetchMethod.POST:
@@ -231,7 +251,7 @@ def fetch(path: str, method: FetchMethod, access_token: str, data=None):
     # raise exceptions for easier handling
     if response.status_code == 404:
         raise ResourceNotFoundException(
-            f'{url} {method.name} (HttpError {response.status_code})\n{json_term({"request": data, "response":result})}'
+            f'{method.name} {url} (HttpError {response.status_code})\n{json_term({"request": data, "response":result})}'
         )
     elif not response.ok:
         raise requests.exceptions.HTTPError(
@@ -246,8 +266,8 @@ def get_categories(
     platforms: PlatformList = list(Platform),
 ):
     return fetch(
-        path=f"/appCategories?filter[platforms]={','.join(__names(platforms))}&exists[parent]=false&include=subcategories",
         method=FetchMethod.GET,
+        path=f"/appCategories?filter[platforms]={','.join(__names(platforms))}&exists[parent]=false&include=subcategories",
         access_token=access_token,
     )["data"]
 
@@ -255,7 +275,7 @@ def get_categories(
 def get_apps(
     access_token: str,
 ):
-    return fetch(path=f"/apps", method=FetchMethod.GET, access_token=access_token)[
+    return fetch(method=FetchMethod.GET, path=f"/apps", access_token=access_token)[
         "data"
     ]
 
@@ -265,7 +285,7 @@ def get_app(
     access_token: str,
 ):
     return fetch(
-        path=f"/apps/{app_id}", method=FetchMethod.GET, access_token=access_token
+        method=FetchMethod.GET, path=f"/apps/{app_id}", access_token=access_token
     )["data"]
 
 
@@ -298,8 +318,8 @@ def get_infos(
 ):
     """Get the list of app infos, optionally filtering by appstore state."""
     versions = fetch(
-        path=f"/apps/{app_id}/appInfos",
         method=FetchMethod.GET,
+        path=f"/apps/{app_id}/appInfos",
         access_token=access_token,
     )["data"]
 
@@ -317,8 +337,8 @@ def update_info(
         relationships[k] = {"data": {"id": v, "type": "appCategories"}}
 
     return fetch(
-        path=f"/appInfos/{info_id}",
         method=FetchMethod.PATCH,
+        path=f"/appInfos/{info_id}",
         access_token=access_token,
         data={
             "data": {
@@ -336,8 +356,8 @@ def get_info_localizations(
 ):
     """Get the list of app info localizations."""
     return fetch(
-        path=f"/appInfos/{info_id}/appInfoLocalizations",
         method=FetchMethod.GET,
+        path=f"/appInfos/{info_id}/appInfoLocalizations",
         access_token=access_token,
     )["data"]
 
@@ -350,8 +370,8 @@ def create_info_localization(
 ):
     """Creates a new app store info localization."""
     return fetch(
-        path=f"/appInfoLocalizations",
         method=FetchMethod.POST,
+        path=f"/appInfoLocalizations",
         access_token=access_token,
         data={
             "data": {
@@ -373,8 +393,8 @@ def update_info_localization(
     """Updates the meta data for the specified App Info Localization.
     Some data fields require the App Version to be in an editable state."""
     return fetch(
-        path=f"/appInfoLocalizations/{info_localization_id}",
         method=FetchMethod.PATCH,
+        path=f"/appInfoLocalizations/{info_localization_id}",
         access_token=access_token,
         data={
             "data": {
@@ -392,8 +412,8 @@ def delete_info_localization(
 ):
     """Deletes the specified App Info Localization."""
     fetch(
-        path=f"/appInfoLocalizations/{info_localization_id}",
         method=FetchMethod.DELETE,
+        path=f"/appInfoLocalizations/{info_localization_id}",
         access_token=access_token,
     )
 
@@ -406,8 +426,8 @@ def create_version(
 ):
     """Creates a new app version."""
     return fetch(
-        path=f"/appStoreVersions/",
         method=FetchMethod.POST,
+        path=f"/appStoreVersions/",
         access_token=access_token,
         data={
             "data": {
@@ -429,8 +449,8 @@ def update_version(
 ):
     """Update an app version."""
     return fetch(
-        path=f"/appStoreVersions/{version_id}",
         method=FetchMethod.PATCH,
+        path=f"/appStoreVersions/{version_id}",
         access_token=access_token,
         data={
             "data": {
@@ -450,8 +470,8 @@ def get_versions(
 ):
     """Get the list of app versions, optionally filtering by platform and/or state."""
     versions = fetch(
-        path=f"/apps/{app_id}/appStoreVersions",
         method=FetchMethod.GET,
+        path=f"/apps/{app_id}/appStoreVersions",
         access_token=access_token,
     )["data"]
 
@@ -500,8 +520,8 @@ def get_version_localizations(
     access_token: str,
 ):
     return fetch(
-        path=f"/appStoreVersions/{version_id}/appStoreVersionLocalizations",
         method=FetchMethod.GET,
+        path=f"/appStoreVersions/{version_id}/appStoreVersionLocalizations",
         access_token=access_token,
     )["data"]
 
@@ -514,8 +534,8 @@ def create_version_localization(
 ):
     """Creates a new app store version localization."""
     return fetch(
-        path=f"/appStoreVersionLocalizations",
         method=FetchMethod.POST,
+        path=f"/appStoreVersionLocalizations",
         access_token=access_token,
         data={
             "data": {
@@ -539,8 +559,8 @@ def update_version_localization(
     """Updates the meta data for the specified App Version Localization.
     Some data fields require the App Version to be in an editable state."""
     return fetch(
-        path=f"/appStoreVersionLocalizations/{localization_id}",
         method=FetchMethod.PATCH,
+        path=f"/appStoreVersionLocalizations/{localization_id}",
         access_token=access_token,
         data={
             "data": {
@@ -558,8 +578,8 @@ def delete_version_localization(
 ):
     """Deletes the specified App Version Localization."""
     fetch(
-        path=f"/appStoreVersionLocalizations/{localization_id}",
         method=FetchMethod.DELETE,
+        path=f"/appStoreVersionLocalizations/{localization_id}",
         access_token=access_token,
     )
 
@@ -570,8 +590,8 @@ def get_screenshot_sets(
 ):
     """Get the screenshot sets from the specified App Version Localization."""
     return fetch(
-        path=f"/appStoreVersionLocalizations/{localization_id}/appScreenshotSets",
         method=FetchMethod.GET,
+        path=f"/appStoreVersionLocalizations/{localization_id}/appScreenshotSets",
         access_token=access_token,
     )["data"]
 
@@ -585,8 +605,8 @@ def create_screenshot_set(
 ):
     """Create a new screenshot set in the specified App Version Localization."""
     return fetch(
-        path=f"/appScreenshotSets",
         method=FetchMethod.POST,
+        path=f"/appScreenshotSets",
         access_token=access_token,
         data={
             "data": {
@@ -611,8 +631,8 @@ def delete_screenshot_set(
 ):
     """Delete a screenshot set from the App Version Localization."""
     fetch(
-        path=f"/appScreenshotSets/{screenshot_set_id}",
         method=FetchMethod.DELETE,
+        path=f"/appScreenshotSets/{screenshot_set_id}",
         access_token=access_token,
     )
 
@@ -624,8 +644,8 @@ def update_screenshot_order(
 ):
     """Update the order of the screenshots in a screenshot set."""
     return fetch(
-        path=f"/appScreenshotSets/{screenshot_set_id}/relationships/appScreenshots",
         method=FetchMethod.POST,
+        path=f"/appScreenshotSets/{screenshot_set_id}/relationships/appScreenshots",
         access_token=access_token,
         data={
             "data": [
@@ -641,10 +661,86 @@ def get_screenshots(
 ):
     """Get the screenshots in a screenshot set."""
     return fetch(
-        path=f"/appScreenshotSets/{screenshot_set_id}/appScreenshots",
         method=FetchMethod.GET,
+        path=f"/appScreenshotSets/{screenshot_set_id}/appScreenshots",
         access_token=access_token,
     )["data"]
+
+
+def get_screenshot(
+    screenshot_id: str,
+    access_token: str,
+):
+    """Get the screenshot info."""
+    return fetch(
+        method=FetchMethod.GET,
+        path=f"/appScreenshots/{screenshot_id}",
+        access_token=access_token,
+    )["data"]
+
+
+def create_screenshot(
+    screenshot_set_id: str,
+    file_name: str,
+    file_size: int,
+    access_token: str,
+):
+    """Create a new screenshot in the specified screenshot set."""
+    return fetch(
+        method=FetchMethod.POST,
+        path=f"/appScreenshots",
+        access_token=access_token,
+        data={
+            "data": {
+                "attributes": {"fileName": file_name, "fileSize": file_size},
+                "relationships": {
+                    "appScreenshotSet": {
+                        "data": {
+                            "id": screenshot_set_id,
+                            "type": " appScreenshotSets",
+                        }
+                    }
+                },
+                "type": "appScreenshots",
+            }
+        },
+    )["data"]
+
+
+def update_screenshot(
+    screenshot_id: str,
+    uploaded: bool,
+    sourceFileChecksum: str,
+    access_token: str,
+):
+    """Delete a screenshot from its screenshot set."""
+    return fetch(
+        method=FetchMethod.PATCH,
+        path=f"/appScreenshots/{screenshot_id}",
+        access_token=access_token,
+        data={
+            "data": {
+                "id": screenshot_id,
+                "attributes": {
+                    "uploaded": uploaded,
+                    "sourceFileChecksum": sourceFileChecksum,
+                },
+                "type": "appScreenshots",
+            }
+        },
+    )["data"]
+
+
+def delete_screenshot(
+    screenshot_id: str,
+    access_token: str,
+):
+    """Delete a screenshot from its screenshot set."""
+    fetch(
+        method=FetchMethod.DELETE,
+        path=f"/appScreenshots/{screenshot_id}",
+        access_token=access_token,
+    )
 
 
 def get_preview_sets(
@@ -653,8 +749,8 @@ def get_preview_sets(
 ):
     """Get the preview sets in the specified App Version Localization."""
     return fetch(
-        path=f"/appStoreVersionLocalizations/{localization_id}/appPreviewSets",
         method=FetchMethod.GET,
+        path=f"/appStoreVersionLocalizations/{localization_id}/appPreviewSets",
         access_token=access_token,
     )["data"]
 
@@ -665,7 +761,7 @@ def get_previews(
 ):
     """Get the previews in a preview set."""
     return fetch(
-        path=f"/appPreviewSets/{preview_set_id}/appPreviews",
         method=FetchMethod.GET,
+        path=f"/appPreviewSets/{preview_set_id}/appPreviews",
         access_token=access_token,
     )["data"]

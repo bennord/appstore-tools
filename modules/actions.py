@@ -5,6 +5,7 @@ import sys
 import os
 import logging
 import requests
+import hashlib
 from modules.print_util import color_term, json_term
 from typing import Union, Optional
 from enum import Enum, auto
@@ -528,6 +529,121 @@ def print_locale_status(locale: str, locale_color: str, status: str):
     )
 
 
+def publish_screenshot(
+    access_token: str,
+    screenshot_path: str,
+    screenshot_set_id: str,
+):
+    if not os.path.isfile(screenshot_path):
+        raise FileNotFoundError("Screenshot path does not exist: {screenshot_path}")
+
+    _, file_name = os.path.split(screenshot_path)
+    file_stat = os.stat(screenshot_path)
+    file_hash = hashlib.md5()
+
+    # Create
+    screenshot = appstore.create_screenshot(
+        screenshot_set_id=screenshot_set_id,
+        file_name=file_name,
+        file_size=file_stat.st_size,
+        access_token=access_token,
+    )
+
+    screenshot_id = screenshot["id"]
+    upload_operations = screenshot["attributes"]["uploadOperations"]
+
+    # Upload
+    for op in upload_operations:
+        method: str = op["method"]
+        url: str = op["url"]
+        headers: dict = {}
+        for h in op["requestHeaders"]:
+            headers[h["name"]] = h["value"]
+        length: int = op["length"]
+        offset: int = op["offset"]
+
+        with open(screenshot_path, "rb") as file:
+            file.seek(offset)
+            file_chunk = file.read(length)
+
+        file_hash.update(file_chunk)
+        requests.request(method=method, url=url, headers=headers, data=file_chunk)
+
+    # Commit
+    checksum = file_hash.hexdigest()
+    screenshot = appstore.update_screenshot(
+        screenshot_id=screenshot_id,
+        uploaded=True,
+        sourceFileChecksum=checksum,
+        access_token=access_token,
+    )
+
+
+def screenshot_checksum_matches(screenshot, screenshot_set_dir: str) -> bool:
+    """Checks if the appstore checksum matches the asset checksum"""
+    file_name = screenshot["attributes"]["fileName"]
+    file_path = os.path.join(screenshot_set_dir, file_name)
+
+    appstore_checksum = screenshot["attributes"]["sourceFileChecksum"]
+
+    if not os.path.isfile(file_path):
+        return False
+
+    with open(file_path, "rb") as file:
+        checksum = hashlib.md5(file.read()).hexdigest()
+        return checksum == appstore_checksum
+
+
+def publish_screenshots(
+    access_token: str,
+    screenshot_set_dir: str,
+    screenshot_set_id: str,
+):
+    # Delete outdated screenshots
+    screenshots = appstore.get_screenshots(
+        screenshot_set_id=screenshot_set_id, access_token=access_token
+    )
+    for screenshot in screenshots:
+        if not screenshot_checksum_matches(
+            screenshot=screenshot, screenshot_set_dir=screenshot_set_dir
+        ):
+            appstore.delete_screenshot(
+                screenshot_id=screenshot["id"], access_token=access_token
+            )
+
+    # Create new screenshots
+    screenshots = appstore.get_screenshots(
+        screenshot_set_id=screenshot_set_id, access_token=access_token
+    )
+    screenshot_file_names = [s["attributes"]["fileName"] for s in screenshots]
+    asset_file_names = [
+        x
+        for x in os.listdir(screenshot_set_dir)
+        if os.path.isfile(os.path.join(screenshot_set_dir, x))
+    ]
+    new_file_names = [x for x in asset_file_names if x not in screenshot_file_names]
+
+    for file_name in new_file_names:
+        file_path = os.path.join(screenshot_set_dir, file_name)
+        publish_screenshot(
+            access_token=access_token,
+            screenshot_path=file_path,
+            screenshot_set_id=screenshot_set_id,
+        )
+
+    # Reorder the screenshots
+    screenshots = appstore.get_screenshots(
+        screenshot_set_id=screenshot_set_id, access_token=access_token
+    )
+    screenshot_ids = [x["id"] for x in screenshots]
+    screenshot_ids.sort()
+    appstore.update_screenshot_order(
+        screenshot_set_id=screenshot_set_id,
+        screenshot_ids=screenshot_ids,
+        access_token=access_token,
+    )
+
+
 def publish_info(
     access_token: str,
     app_dir: str,
@@ -767,6 +883,8 @@ def publish_version(
                 )
             else:
                 print_locale_status(locale, colorama.Fore.CYAN, "no changes")
+
+            # TODO: publish screenshot sets
 
 
 def publish(
