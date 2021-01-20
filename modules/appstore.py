@@ -9,7 +9,7 @@ from enum import Enum, auto
 from .print_util import json_term, color_term
 
 # TODO: remove pylint "disable" directives when pylint supports python 3.9 completely
-from typing import TypedDict, Optional, Union, List, Literal, Sequence
+from typing import TypedDict, Optional, Union, Literal, Sequence
 
 APPSTORE_URI_ROOT = "https://api.appstoreconnect.apple.com/v1"
 APPSTORE_AUDIENCE = "appstoreconnect-v1"
@@ -69,6 +69,35 @@ editable_version_states = [
 ]
 
 live_version_state = VersionState.READY_FOR_SALE
+
+
+class ScreenshotDisplayType(Enum):
+    APP_IPHONE_65 = auto()
+    APP_IPHONE_58 = auto()
+    APP_IPHONE_55 = auto()
+    APP_IPHONE_47 = auto()
+    APP_IPHONE_40 = auto()
+    APP_IPHONE_35 = auto()
+    APP_IPAD_PRO_3GEN_129 = auto()
+    APP_IPAD_PRO_3GEN_11 = auto()
+    APP_IPAD_PRO_129 = auto()
+    APP_IPAD_105 = auto()
+    APP_IPAD_97 = auto()
+    APP_DESKTOP = auto()
+    APP_WATCH_SERIES_4 = auto()
+    APP_WATCH_SERIES_3 = auto()
+    APP_APPLE_TV = auto()
+    IMESSAGE_APP_IPHONE_65 = auto()
+    IMESSAGE_APP_IPHONE_58 = auto()
+    IMESSAGE_APP_IPHONE_55 = auto()
+    IMESSAGE_APP_IPHONE_47 = auto()
+    IMESSAGE_APP_IPHONE_40 = auto()
+    IMESSAGE_APP_IPAD_PRO_3GEN_129 = auto()
+    IMESSAGE_APP_IPAD_PRO_3GEN_11 = auto()
+    IMESSAGE_APP_IPAD_PRO_129 = auto()
+    IMESSAGE_APP_IPAD_105 = auto()
+    IMESSAGE_APP_IPAD_97 = auto()
+
 
 EnumList = Sequence[Union[Enum, str]]  # pylint: disable=unsubscriptable-object
 PlatformList = Sequence[Union[Platform, str]]  # pylint: disable=unsubscriptable-object
@@ -156,6 +185,7 @@ def create_access_token(issuer_id: str, key_id: str, key: str) -> str:
 
 
 def fetch(path: str, method: FetchMethod, access_token: str, data=None):
+    """Fetch a URL resource via the AppStore connect api."""
     headers = {"Authorization": f"Bearer {access_token}"}
 
     url = APPSTORE_URI_ROOT + path if path.startswith("/") else path
@@ -361,7 +391,7 @@ def delete_info_localization(
     access_token: str,
 ):
     """Deletes the specified App Info Localization."""
-    return fetch(
+    fetch(
         path=f"/appInfoLocalizations/{info_localization_id}",
         method=FetchMethod.DELETE,
         access_token=access_token,
@@ -527,7 +557,7 @@ def delete_version_localization(
     access_token: str,
 ):
     """Deletes the specified App Version Localization."""
-    return fetch(
+    fetch(
         path=f"/appStoreVersionLocalizations/{localization_id}",
         method=FetchMethod.DELETE,
         access_token=access_token,
@@ -538,6 +568,7 @@ def get_screenshot_sets(
     localization_id: str,
     access_token: str,
 ):
+    """Get the screenshot sets from the specified App Version Localization."""
     return fetch(
         path=f"/appStoreVersionLocalizations/{localization_id}/appScreenshotSets",
         method=FetchMethod.GET,
@@ -545,10 +576,70 @@ def get_screenshot_sets(
     )["data"]
 
 
+def create_screenshot_set(
+    localization_id: str,
+    display_type: Union[
+        ScreenshotDisplayType, str
+    ],  # pylint: disable=unsubscriptable-object
+    access_token: str,
+):
+    """Create a new screenshot set in the specified App Version Localization."""
+    return fetch(
+        path=f"/appScreenshotSets",
+        method=FetchMethod.POST,
+        access_token=access_token,
+        data={
+            "data": {
+                "attributes": {"screenshotDisplayType": __name(display_type)},
+                "relationships": {
+                    "appStoreVersionLocalization": {
+                        "data": {
+                            "id": localization_id,
+                            "type": " appStoreVersionLocalizations",
+                        }
+                    }
+                },
+                "type": "appScreenshotSets",
+            }
+        },
+    )["data"]
+
+
+def delete_screenshot_set(
+    screenshot_set_id: str,
+    access_token: str,
+):
+    """Delete a screenshot set from the App Version Localization."""
+    fetch(
+        path=f"/appScreenshotSets/{screenshot_set_id}",
+        method=FetchMethod.DELETE,
+        access_token=access_token,
+    )
+
+
+def update_screenshot_order(
+    screenshot_set_id: str,
+    screenshot_ids: Sequence[str],
+    access_token: str,
+):
+    """Update the order of the screenshots in a screenshot set."""
+    return fetch(
+        path=f"/appScreenshotSets/{screenshot_set_id}/relationships/appScreenshots",
+        method=FetchMethod.POST,
+        access_token=access_token,
+        data={
+            "data": [
+                {"id": ss_id, "type": "appScreenshots"} for ss_id in screenshot_ids
+            ]
+        },
+    )["data"]
+
+
 def get_screenshots(
     screenshot_set_id: str,
     access_token: str,
 ):
+    """Get the screenshots in a screenshot set."""
     return fetch(
         path=f"/appScreenshotSets/{screenshot_set_id}/appScreenshots",
         method=FetchMethod.GET,
@@ -560,6 +651,7 @@ def get_preview_sets(
     localization_id: str,
     access_token: str,
 ):
+    """Get the preview sets in the specified App Version Localization."""
     return fetch(
         path=f"/appStoreVersionLocalizations/{localization_id}/appPreviewSets",
         method=FetchMethod.GET,
@@ -571,6 +663,7 @@ def get_previews(
     preview_set_id: str,
     access_token: str,
 ):
+    """Get the previews in a preview set."""
     return fetch(
         path=f"/appPreviewSets/{preview_set_id}/appPreviews",
         method=FetchMethod.GET,
