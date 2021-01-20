@@ -191,20 +191,22 @@ def list_screenshots(
         version_id = version["id"]
         version_state = version["attributes"]["appStoreState"]
         print_clr(
-            f"{colorama.Fore.GREEN}version: {colorama.Fore.BLUE}{version_id} {version_state}"
+            f"{colorama.Fore.GREEN}{version_state} {colorama.Style.DIM}{version_id} "
         )
 
         localizations = appstore.get_version_localizations(
             version_id=version_id, access_token=access_token
         )
 
-        localization_ids = (l["id"] for l in localizations)
-        for loc_id in localization_ids:
+        for loc in localizations:
+            loc_id = loc["id"]
+            locale = loc["attributes"]["locale"]
+
             screenshot_sets = appstore.get_screenshot_sets(
                 localization_id=loc_id, access_token=access_token
             )
             print_clr(
-                f"{colorama.Fore.GREEN}loc_id {loc_id}: ",
+                f"{colorama.Fore.GREEN}{locale}: ",
                 f"Found {colorama.Fore.CYAN}{len(screenshot_sets)}{colorama.Fore.RESET} screenshot sets.",
             )
 
@@ -215,8 +217,14 @@ def list_screenshots(
                     screenshot_set_id=ss_set_id, access_token=access_token
                 )
                 if verbosity == Verbosity.SHORT:
-                    screenshots = [x["attributes"]["fileName"] for x in screenshots]
-                elif verbosity == Verbosity.LONG:
+                    print_clr(colorama.Fore.CYAN + ss_display_type)
+                    for x in screenshots:
+                        print_clr(
+                            f'  {colorama.Style.DIM}{x["attributes"]["assetDeliveryState"]["state"]:15}',
+                            f'  {x["attributes"]["fileName"]}',
+                        )
+                    continue
+                if verbosity == Verbosity.LONG:
                     screenshots = [
                         (
                             {
