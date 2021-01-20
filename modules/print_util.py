@@ -16,7 +16,9 @@ def json_term(obj: Any):
 
 def clr(*colored_text: str, sep: str = "") -> str:
     """Add the color reset code after each colored_text."""
-    return (sep + colorama.Style.RESET_ALL).join(colored_text)
+    return (sep + colorama.Style.RESET_ALL).join(
+        colored_text
+    ) + colorama.Style.RESET_ALL
 
 
 def print_clr(*colored_text: str, sep: str = ""):
