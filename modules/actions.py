@@ -792,6 +792,80 @@ def publish_version_localizations(
         )
 
 
+def publish_version(
+    access_token: str,
+    app_dir: str,
+    app_id: str,
+    bundle_id: str,
+    platform: Union[appstore.Platform, str],  # pylint: disable=unsubscriptable-object
+    version_string: str,
+    update_version_string: bool,
+    allow_create_version: bool = True,
+    allow_create_locale: bool = True,
+    allow_delete_locale: bool = True,
+):
+    # Get Versions
+    versions = appstore.get_versions(
+        app_id=app_id,
+        access_token=access_token,
+        platforms=[platform],
+        states=appstore.editable_version_states,
+    )
+    print_clr(
+        f"Found {colorama.Fore.CYAN}{len(versions)}{colorama.Fore.RESET} editable app versions ",
+        f"for {colorama.Fore.CYAN}{platform}{colorama.Fore.RESET}.",
+    )
+
+    if len(versions) == 0 and allow_create_version:
+        print(
+            f"Creating new version: {colorama.Fore.BLUE}{version_string}{colorama.Fore.RESET}"
+        )
+        created_version = appstore.create_version(
+            app_id=app_id,
+            platform=platform,
+            version_string=version_string,
+            access_token=access_token,
+        )
+        versions.append(created_version)
+    elif update_version_string:
+        for v in versions:
+            version_id = v["id"]
+            version_state = v["attributes"]["appStoreState"]
+
+            version_attributes: appstore.VersionAttributes = {
+                "versionString": version_string,
+            }
+            print_clr(
+                f"{colorama.Fore.GREEN}Version ",
+                f"{colorama.Fore.BLUE}{version_state} ",
+                f": updating version ",
+                f"{colorama.Fore.CYAN}{version_attributes}",
+            )
+
+            appstore.update_version(
+                version_id=version_id,
+                version_attributes=version_attributes,
+                access_token=access_token,
+            )
+
+    for v in versions:
+        version_id = v["id"]
+        version_state = v["attributes"]["appStoreState"]
+
+        print_clr(
+            f"{colorama.Fore.GREEN}Version ",
+            f"{colorama.Fore.BLUE}{version_id} ",
+            f"{colorama.Fore.CYAN}{version_state} ",
+        )
+        publish_version_localizations(
+            access_token=access_token,
+            app_dir=app_dir,
+            version_id=version_id,
+            allow_create_locale=allow_create_locale,
+            allow_delete_locale=allow_delete_locale,
+        )
+
+
 def publish_info(
     access_token: str,
     app_dir: str,
@@ -880,80 +954,6 @@ def publish_info(
                 )
             else:
                 print_locale_status(locale, colorama.Fore.CYAN, "no changes")
-
-
-def publish_version(
-    access_token: str,
-    app_dir: str,
-    app_id: str,
-    bundle_id: str,
-    platform: Union[appstore.Platform, str],  # pylint: disable=unsubscriptable-object
-    version_string: str,
-    update_version_string: bool,
-    allow_create_version: bool = True,
-    allow_create_locale: bool = True,
-    allow_delete_locale: bool = True,
-):
-    # Get Versions
-    versions = appstore.get_versions(
-        app_id=app_id,
-        access_token=access_token,
-        platforms=[platform],
-        states=appstore.editable_version_states,
-    )
-    print_clr(
-        f"Found {colorama.Fore.CYAN}{len(versions)}{colorama.Fore.RESET} editable app versions ",
-        f"for {colorama.Fore.CYAN}{platform}{colorama.Fore.RESET}.",
-    )
-
-    if len(versions) == 0 and allow_create_version:
-        print(
-            f"Creating new version: {colorama.Fore.BLUE}{version_string}{colorama.Fore.RESET}"
-        )
-        created_version = appstore.create_version(
-            app_id=app_id,
-            platform=platform,
-            version_string=version_string,
-            access_token=access_token,
-        )
-        versions.append(created_version)
-    elif update_version_string:
-        for v in versions:
-            version_id = v["id"]
-            version_state = v["attributes"]["appStoreState"]
-
-            version_attributes: appstore.VersionAttributes = {
-                "versionString": version_string,
-            }
-            print_clr(
-                f"{colorama.Fore.GREEN}Version ",
-                f"{colorama.Fore.BLUE}{version_state} ",
-                f": updating version ",
-                f"{colorama.Fore.CYAN}{version_attributes}",
-            )
-
-            appstore.update_version(
-                version_id=version_id,
-                version_attributes=version_attributes,
-                access_token=access_token,
-            )
-
-    for v in versions:
-        version_id = v["id"]
-        version_state = v["attributes"]["appStoreState"]
-
-        print_clr(
-            f"{colorama.Fore.GREEN}Version ",
-            f"{colorama.Fore.BLUE}{version_id} ",
-            f"{colorama.Fore.CYAN}{version_state} ",
-        )
-        publish_version_localizations(
-            access_token=access_token,
-            app_dir=app_dir,
-            version_id=version_id,
-            allow_create_locale=allow_create_locale,
-            allow_delete_locale=allow_delete_locale,
-        )
 
 
 def publish(
