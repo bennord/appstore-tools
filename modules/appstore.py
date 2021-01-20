@@ -683,7 +683,8 @@ def create_screenshot(
     file_size: int,
     access_token: str,
 ):
-    """Create a new screenshot in the specified screenshot set."""
+    """Create a screenshot asset reservation in the specified screenshot set.
+    Use the upload operations in the response to upload the file parts."""
     return fetch(
         method=FetchMethod.POST,
         path=f"/appScreenshots",
@@ -711,7 +712,7 @@ def update_screenshot(
     sourceFileChecksum: str,
     access_token: str,
 ):
-    """Delete a screenshot from its screenshot set."""
+    """Update the screenshot to commit it after a successful upload."""
     return fetch(
         method=FetchMethod.PATCH,
         path=f"/appScreenshots/{screenshot_id}",
