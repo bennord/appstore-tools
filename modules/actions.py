@@ -48,6 +48,14 @@ def read_txt_file(
         return None
 
 
+def print_locale_status(locale: str, color: str, status: str):
+    print_clr(f"  {color}{locale:5}{colorama.Style.RESET_ALL} - {status}")
+
+
+def print_screenshot_set_status(display_type: str, color: str, status: str):
+    print_clr(f"    {color}{display_type:5}{colorama.Style.RESET_ALL} - {status}")
+
+
 def list_categories(
     access_token: str,
     platforms: appstore.PlatformList,
@@ -504,10 +512,6 @@ def download(
     print_clr(colorama.Fore.GREEN + "Download complete")
 
 
-def print_locale_status(locale: str, locale_color: str, status: str):
-    print_clr(f"  {locale_color}{locale:5}{colorama.Style.RESET_ALL} - {status}")
-
-
 def publish_screenshot(
     access_token: str,
     screenshot_path: str,
@@ -623,6 +627,171 @@ def publish_screenshots(
     )
 
 
+def publish_screenshot_sets(
+    access_token: str,
+    localization_dir: str,
+    localization_id: str,
+):
+    """Publish the screenshot sets from assets on disk."""
+    screenshots_dir = os.path.join(localization_dir, "screenshots")
+    if not os.path.isdir(screenshots_dir):
+        print_clr(
+            f"    No screenshots: directory {colorama.Fore.CYAN}{screenshots_dir}{colorama.Fore.RESET} not found.",
+        )
+        return
+
+    screenshot_sets = appstore.get_screenshot_sets(
+        localization_id=localization_id, access_token=access_token
+    )
+
+    asset_display_types = [
+        x
+        for x in os.listdir(screenshots_dir)
+        if os.path.isdir(os.path.join(screenshots_dir, x))
+    ]
+
+    # Create new display types
+    loc_display_types = [
+        x["attributes"]["screenshotDisplayType"] for x in screenshot_sets
+    ]
+    new_display_types = [x for x in asset_display_types if x not in loc_display_types]
+    known_display_types = [x.name for x in appstore.ScreenshotDisplayType]
+    for display_type in new_display_types:
+        warning = (
+            ""
+            if display_type in known_display_types
+            else clr(
+                f"{colorama.Style.DIM} (warning: ScreenshotDisplayType not in ",
+                f"{colorama.Fore.CYAN}{known_display_types}",
+                f"{colorama.Style.DIM})",
+            )
+        )
+        print_screenshot_set_status(
+            display_type, colorama.Fore.YELLOW, "creating" + warning
+        )
+        ss_set = appstore.create_screenshot_set(
+            localization_id=localization_id,
+            display_type=display_type,
+            access_token=access_token,
+        )
+        screenshot_sets.append(ss_set)
+
+    for ss_set in screenshot_sets:
+        ss_set_id = ss_set["id"]
+        display_type = ss_set["attributes"]["screenshotDisplayType"]
+        ss_set_dir = os.path.join(screenshots_dir, display_type)
+
+        # Delete removed locales
+        if not os.path.isdir(ss_set_dir):
+            print_screenshot_set_status(display_type, colorama.Fore.RED, "deleting")
+            appstore.delete_screenshot_set(
+                screenshot_set_id=ss_set_id, access_token=access_token
+            )
+            continue
+
+        # Publish
+        publish_screenshots(
+            access_token=access_token,
+            screenshot_set_dir=ss_set_dir,
+            screenshot_set_id=ss_set_id,
+        )
+
+
+def publish_version_localizations(
+    access_token: str,
+    app_dir: str,
+    version_id: str,
+    allow_create_locale: bool = True,
+    allow_delete_locale: bool = True,
+):
+    localizations = appstore.get_version_localizations(
+        version_id=version_id, access_token=access_token
+    )
+
+    asset_locales = [
+        x for x in os.listdir(app_dir) if os.path.isdir(os.path.join(app_dir, x))
+    ]
+
+    # create new localizations
+    version_locales = [loc["attributes"]["locale"] for loc in localizations]
+    new_locales = [x for x in asset_locales if x not in version_locales]
+    if allow_create_locale:
+        for locale in new_locales:
+            print_locale_status(locale, colorama.Fore.YELLOW, "creating")
+            loc = appstore.create_version_localization(
+                version_id=version_id,
+                locale=locale,
+                localization_attributes={},
+                access_token=access_token,
+            )
+            localizations.append(loc)
+    else:
+        for locale in new_locales:
+            print_locale_status(
+                locale, colorama.Fore.LIGHTBLACK_EX, "creation not allowed"
+            )
+
+    # publish localizations
+    for loc in localizations:
+        loc_id = loc["id"]
+        loc_attr = loc["attributes"]
+        locale = loc_attr["locale"]
+        loc_dir = os.path.join(app_dir, locale)
+
+        # Delete removed locales
+        if not os.path.isdir(loc_dir):
+            if allow_delete_locale:
+                print_locale_status(locale, colorama.Fore.RED, "deleting")
+                appstore.delete_version_localization(
+                    localization_id=loc_id, access_token=access_token
+                )
+            else:
+                print_locale_status(
+                    locale, colorama.Fore.LIGHTBLACK_EX, "deletion not allowed"
+                )
+            continue
+
+        # Normalize all attribute values to strings
+        for key in appstore.VersionLocalizationAttributes.__annotations__.keys():
+            if loc_attr[key] is None:
+                loc_attr[key] = ""
+
+        # Load local data from disk
+        asset_loc_data: appstore.VersionLocalizationAttributes = {}
+        for key in appstore.VersionLocalizationAttributes.__annotations__.keys():
+            path = os.path.join(loc_dir, key + ".txt")
+            content = read_txt_file(path)
+            if content is not None:
+                asset_loc_data[key] = content  # type: ignore
+
+        # Only need to update if there are differences
+        loc_diff_keys = [
+            key
+            for key, value in asset_loc_data.items()
+            if value is not None and value != loc_attr[key]
+        ]
+        if len(loc_diff_keys) > 0:
+            print_locale_status(
+                locale,
+                colorama.Fore.CYAN,
+                f"updating {colorama.Fore.CYAN}{colorama.Style.DIM}{loc_diff_keys}",
+            )
+            appstore.update_version_localization(
+                localization_id=loc_id,
+                localization_attributes=asset_loc_data,
+                access_token=access_token,
+            )
+        else:
+            print_locale_status(locale, colorama.Fore.CYAN, "no changes")
+
+        # Screenshots
+        publish_screenshot_sets(
+            access_token=access_token,
+            localization_dir=loc_dir,
+            localization_id=loc_id,
+        )
+
+
 def publish_info(
     access_token: str,
     app_dir: str,
@@ -685,17 +854,17 @@ def publish_info(
                     loc_attr[key] = ""
 
             # Load local data from disk
-            file_loc_data: appstore.InfoLocalizationAttributes = {}
+            asset_loc_data: appstore.InfoLocalizationAttributes = {}
             for key in appstore.InfoLocalizationAttributes.__annotations__.keys():
                 path = os.path.join(loc_dir, key + ".txt")
                 content = read_txt_file(path)
                 if content is not None:
-                    file_loc_data[key] = content  # type: ignore
+                    asset_loc_data[key] = content  # type: ignore
 
             # Only need to update if there are differences
             loc_diff_keys = [
                 key
-                for key, value in file_loc_data.items()
+                for key, value in asset_loc_data.items()
                 if value is not None and value != loc_attr[key]
             ]
             if len(loc_diff_keys) > 0:
@@ -706,7 +875,7 @@ def publish_info(
                 )
                 appstore.update_info_localization(
                     info_localization_id=loc_id,
-                    info_localization_attributes=file_loc_data,
+                    info_localization_attributes=asset_loc_data,
                     access_token=access_token,
                 )
             else:
@@ -769,10 +938,6 @@ def publish_version(
                 access_token=access_token,
             )
 
-    file_locales = [
-        x for x in os.listdir(app_dir) if os.path.isdir(os.path.join(app_dir, x))
-    ]
-
     for v in versions:
         version_id = v["id"]
         version_state = v["attributes"]["appStoreState"]
@@ -782,84 +947,13 @@ def publish_version(
             f"{colorama.Fore.BLUE}{version_id} ",
             f"{colorama.Fore.CYAN}{version_state} ",
         )
-
-        localizations = appstore.get_version_localizations(
-            version_id=version_id, access_token=access_token
+        publish_version_localizations(
+            access_token=access_token,
+            app_dir=app_dir,
+            version_id=version_id,
+            allow_create_locale=allow_create_locale,
+            allow_delete_locale=allow_delete_locale,
         )
-
-        # create new localizations
-        version_locales = [loc["attributes"]["locale"] for loc in localizations]
-        new_locales = [x for x in file_locales if x not in version_locales]
-        if allow_create_locale:
-            for locale in new_locales:
-                print_locale_status(locale, colorama.Fore.YELLOW, "creating")
-                loc = appstore.create_version_localization(
-                    version_id=version_id,
-                    locale=locale,
-                    localization_attributes={},
-                    access_token=access_token,
-                )
-                localizations.append(loc)
-        else:
-            for locale in new_locales:
-                print_locale_status(
-                    locale, colorama.Fore.LIGHTBLACK_EX, "creation not allowed"
-                )
-
-        # publish localizations
-        for loc in localizations:
-            loc_id = loc["id"]
-            loc_attr = loc["attributes"]
-            locale = loc_attr["locale"]
-            loc_dir = os.path.join(app_dir, locale)
-
-            # Delete removed locales
-            if not os.path.isdir(loc_dir):
-                if allow_delete_locale:
-                    print_locale_status(locale, colorama.Fore.RED, "deleting")
-                    appstore.delete_version_localization(
-                        localization_id=loc_id, access_token=access_token
-                    )
-                else:
-                    print_locale_status(
-                        locale, colorama.Fore.LIGHTBLACK_EX, "deletion not allowed"
-                    )
-                continue
-
-            # Normalize all attribute values to strings
-            for key in appstore.VersionLocalizationAttributes.__annotations__.keys():
-                if loc_attr[key] is None:
-                    loc_attr[key] = ""
-
-            # Load local data from disk
-            file_loc_data: appstore.VersionLocalizationAttributes = {}
-            for key in appstore.VersionLocalizationAttributes.__annotations__.keys():
-                path = os.path.join(loc_dir, key + ".txt")
-                content = read_txt_file(path)
-                if content is not None:
-                    file_loc_data[key] = content  # type: ignore
-
-            # Only need to update if there are differences
-            loc_diff_keys = [
-                key
-                for key, value in file_loc_data.items()
-                if value is not None and value != loc_attr[key]
-            ]
-            if len(loc_diff_keys) > 0:
-                print_locale_status(
-                    locale,
-                    colorama.Fore.CYAN,
-                    f"updating {colorama.Fore.CYAN}{colorama.Style.DIM}{loc_diff_keys}",
-                )
-                appstore.update_version_localization(
-                    localization_id=loc_id,
-                    localization_attributes=file_loc_data,
-                    access_token=access_token,
-                )
-            else:
-                print_locale_status(locale, colorama.Fore.CYAN, "no changes")
-
-            # TODO: publish screenshot sets
 
 
 def publish(
