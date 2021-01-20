@@ -616,13 +616,33 @@ def screenshot_checksum_matches(screenshot, screenshot_set_dir: str) -> bool:
     appstore_checksum = screenshot["attributes"]["sourceFileChecksum"]
 
     if not os.path.isfile(file_path):
+        print_screenshot_status(
+            file_name,
+            colorama.Fore.RED,
+            "no source file",
+        )
         return False
 
     with open(file_path, "rb") as file:
         checksum = hashlib.md5(file.read()).hexdigest()
-        print(
-            f"file: {file_name}, checksum {checksum}, appstore_checksum {appstore_checksum}"
-        )
+        if checksum == appstore_checksum:
+            print_screenshot_status(
+                file_name,
+                colorama.Fore.CYAN,
+                clr(
+                    f"checksum matched: ",
+                    f"{colorama.Style.DIM}{checksum}",
+                ),
+            )
+        else:
+            print_screenshot_status(
+                file_name,
+                colorama.Fore.CYAN,
+                clr(
+                    f"checksum changed: ",
+                    f"{colorama.Style.DIM}{appstore_checksum} -> {checksum}",
+                ),
+            )
         return checksum == appstore_checksum
 
 
@@ -632,27 +652,18 @@ def publish_screenshots(
     screenshot_set_id: str,
     display_type: str,
 ):
-    print_screenshot_set_status(display_type, colorama.Fore.CYAN, "checking")
+    print_screenshot_set_status(
+        display_type, colorama.Fore.CYAN, "checking for changes"
+    )
 
     # Delete outdated screenshots
     screenshots = appstore.get_screenshots(
         screenshot_set_id=screenshot_set_id, access_token=access_token
     )
     for screenshot in screenshots:
-        if screenshot_checksum_matches(
+        if not screenshot_checksum_matches(
             screenshot=screenshot, screenshot_set_dir=screenshot_set_dir
         ):
-            print_screenshot_status(
-                screenshot["attributes"]["fileName"],
-                colorama.Fore.CYAN,
-                "checksum matched",
-            )
-        else:
-            print_screenshot_status(
-                screenshot["attributes"]["fileName"],
-                colorama.Fore.CYAN,
-                "checksum changed: deleting",
-            )
             appstore.delete_screenshot(
                 screenshot_id=screenshot["id"], access_token=access_token
             )
@@ -719,19 +730,9 @@ def publish_screenshot_sets(
         x["attributes"]["screenshotDisplayType"] for x in screenshot_sets
     ]
     new_display_types = [x for x in asset_display_types if x not in loc_display_types]
-    known_display_types = [x.name for x in appstore.ScreenshotDisplayType]
     for display_type in new_display_types:
-        warning = (
-            ""
-            if display_type in known_display_types
-            else clr(
-                f"{colorama.Style.DIM} (warning: ScreenshotDisplayType not in ",
-                f"{colorama.Fore.CYAN}{known_display_types}",
-                f"{colorama.Style.DIM})",
-            )
-        )
         print_screenshot_set_status(
-            display_type, colorama.Fore.YELLOW, "creating" + warning
+            display_type, colorama.Fore.YELLOW, "creating display type"
         )
         ss_set = appstore.create_screenshot_set(
             localization_id=localization_id,
@@ -745,9 +746,11 @@ def publish_screenshot_sets(
         display_type = ss_set["attributes"]["screenshotDisplayType"]
         ss_set_dir = os.path.join(screenshots_dir, display_type)
 
-        # Delete removed locales
+        # Delete removed display types
         if not os.path.isdir(ss_set_dir):
-            print_screenshot_set_status(display_type, colorama.Fore.RED, "deleting")
+            print_screenshot_set_status(
+                display_type, colorama.Fore.RED, "deleting display type"
+            )
             appstore.delete_screenshot_set(
                 screenshot_set_id=ss_set_id, access_token=access_token
             )
@@ -782,7 +785,7 @@ def publish_version_localizations(
     new_locales = [x for x in asset_locales if x not in version_locales]
     if allow_create_locale:
         for locale in new_locales:
-            print_locale_status(locale, colorama.Fore.YELLOW, "creating")
+            print_locale_status(locale, colorama.Fore.YELLOW, "creating locale")
             loc = appstore.create_version_localization(
                 version_id=version_id,
                 locale=locale,
@@ -793,7 +796,7 @@ def publish_version_localizations(
     else:
         for locale in new_locales:
             print_locale_status(
-                locale, colorama.Fore.LIGHTBLACK_EX, "creation not allowed"
+                locale, colorama.Fore.LIGHTBLACK_EX, "locale creation not allowed"
             )
 
     # publish localizations
@@ -806,13 +809,13 @@ def publish_version_localizations(
         # Delete removed locales
         if not os.path.isdir(loc_dir):
             if allow_delete_locale:
-                print_locale_status(locale, colorama.Fore.RED, "deleting")
+                print_locale_status(locale, colorama.Fore.RED, "deleting locale")
                 appstore.delete_version_localization(
                     localization_id=loc_id, access_token=access_token
                 )
             else:
                 print_locale_status(
-                    locale, colorama.Fore.LIGHTBLACK_EX, "deletion not allowed"
+                    locale, colorama.Fore.LIGHTBLACK_EX, "locale deletion not allowed"
                 )
             continue
 
@@ -839,7 +842,7 @@ def publish_version_localizations(
             print_locale_status(
                 locale,
                 colorama.Fore.CYAN,
-                f"updating {colorama.Fore.CYAN}{colorama.Style.DIM}{loc_diff_keys}",
+                f"updating locale {colorama.Fore.CYAN}{colorama.Style.DIM}{loc_diff_keys}",
             )
             appstore.update_version_localization(
                 localization_id=loc_id,
@@ -847,7 +850,9 @@ def publish_version_localizations(
                 access_token=access_token,
             )
         else:
-            print_locale_status(locale, colorama.Fore.CYAN, "no changes")
+            print_locale_status(
+                locale, colorama.Fore.CYAN, "no changes in version settings"
+            )
 
         # Screenshots
         publish_screenshot_sets(
@@ -971,7 +976,7 @@ def publish_info(
         new_locales = [x for x in file_locales if x not in info_locales]
         for locale in new_locales:
             print_locale_status(
-                locale, colorama.Fore.LIGHTBLACK_EX, "creation not allowed"
+                locale, colorama.Fore.LIGHTBLACK_EX, "locale creation not allowed"
             )
 
         for loc in localizations:
@@ -983,7 +988,7 @@ def publish_info(
             # Delete removed locales
             if not os.path.isdir(loc_dir):
                 print_locale_status(
-                    locale, colorama.Fore.LIGHTBLACK_EX, "deletion not allowed"
+                    locale, colorama.Fore.LIGHTBLACK_EX, "locale deletion not allowed"
                 )
                 continue
 
@@ -1010,7 +1015,7 @@ def publish_info(
                 print_locale_status(
                     locale,
                     colorama.Fore.CYAN,
-                    f"updating {colorama.Fore.CYAN}{colorama.Style.DIM}{loc_diff_keys}",
+                    f"updating app info {colorama.Fore.CYAN}{colorama.Style.DIM}{loc_diff_keys}",
                 )
                 appstore.update_info_localization(
                     info_localization_id=loc_id,
@@ -1018,7 +1023,9 @@ def publish_info(
                     access_token=access_token,
                 )
             else:
-                print_locale_status(locale, colorama.Fore.CYAN, "no changes")
+                print_locale_status(
+                    locale, colorama.Fore.CYAN, "no changes in app settings"
+                )
 
 
 def publish(
