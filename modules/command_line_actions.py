@@ -1,8 +1,8 @@
+import sys
+import os
 import modules.appstore as appstore
 import modules.command_line as command_line
 import modules.actions as actions
-import sys
-import os
 
 
 def get_access_token(args):
