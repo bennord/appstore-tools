@@ -7,8 +7,8 @@ from modules.print_util import print_clr, clr, json_term
 from .util import (
     read_txt_file,
     print_locale_status,
-    print_screenshot_set_status,
-    print_screenshot_status,
+    print_media_set_status,
+    print_media_status,
 )
 from typing import Union
 
@@ -26,7 +26,7 @@ def publish_screenshot(
     file_hash = hashlib.md5()
 
     # Create
-    print_screenshot_status(
+    print_media_status(
         file_name,
         colorama.Fore.CYAN,
         "reserving asset",
@@ -56,7 +56,7 @@ def publish_screenshot(
             file_chunk = file.read(length)
 
         file_hash.update(file_chunk)
-        print_screenshot_status(
+        print_media_status(
             file_name,
             colorama.Fore.CYAN,
             f"uploading chunk (offset: {offset}, length: {length})",
@@ -64,7 +64,7 @@ def publish_screenshot(
         requests.request(method=method, url=url, headers=headers, data=file_chunk)
 
     # Commit
-    print_screenshot_status(
+    print_media_status(
         file_name,
         colorama.Fore.CYAN,
         "commiting upload",
@@ -86,7 +86,7 @@ def screenshot_checksum_matches(screenshot, screenshot_set_dir: str) -> bool:
     appstore_checksum = screenshot["attributes"]["sourceFileChecksum"]
 
     if appstore_checksum is None:
-        print_screenshot_status(
+        print_media_status(
             file_name,
             colorama.Fore.CYAN,
             "checksum missing (in processing)",
@@ -94,7 +94,7 @@ def screenshot_checksum_matches(screenshot, screenshot_set_dir: str) -> bool:
         return False
 
     if not os.path.isfile(file_path):
-        print_screenshot_status(
+        print_media_status(
             file_name,
             colorama.Fore.RED,
             "no source file",
@@ -104,7 +104,7 @@ def screenshot_checksum_matches(screenshot, screenshot_set_dir: str) -> bool:
     with open(file_path, "rb") as file:
         checksum = hashlib.md5(file.read()).hexdigest()
         if checksum == appstore_checksum:
-            print_screenshot_status(
+            print_media_status(
                 file_name,
                 colorama.Fore.CYAN + colorama.Style.DIM,
                 clr(
@@ -113,7 +113,7 @@ def screenshot_checksum_matches(screenshot, screenshot_set_dir: str) -> bool:
                 ),
             )
         else:
-            print_screenshot_status(
+            print_media_status(
                 file_name,
                 colorama.Fore.CYAN,
                 clr(
@@ -130,9 +130,7 @@ def publish_screenshots(
     screenshot_set_id: str,
     display_type: str,
 ):
-    print_screenshot_set_status(
-        display_type, colorama.Fore.CYAN, "checking for changes"
-    )
+    print_media_set_status(display_type, colorama.Fore.CYAN, "checking for changes")
 
     # Delete outdated screenshots
     screenshots = appstore.get_screenshots(
@@ -167,7 +165,7 @@ def publish_screenshots(
         )
 
     # Reorder the screenshots
-    print_screenshot_set_status(display_type, colorama.Fore.CYAN, "sorting screenshots")
+    print_media_set_status(display_type, colorama.Fore.CYAN, "sorting screenshots")
     screenshots = appstore.get_screenshots(
         screenshot_set_id=screenshot_set_id, access_token=access_token
     )
@@ -209,7 +207,7 @@ def publish_screenshot_sets(
     ]
     new_display_types = [x for x in asset_display_types if x not in loc_display_types]
     for display_type in new_display_types:
-        print_screenshot_set_status(
+        print_media_set_status(
             display_type, colorama.Fore.YELLOW, "creating display type"
         )
         ss_set = appstore.create_screenshot_set(
@@ -226,7 +224,7 @@ def publish_screenshot_sets(
 
         # Delete removed display types
         if not os.path.isdir(ss_set_dir):
-            print_screenshot_set_status(
+            print_media_set_status(
                 display_type, colorama.Fore.RED, "deleting display type"
             )
             appstore.delete_screenshot_set(

@@ -7,7 +7,15 @@ import logging
 import requests
 from typing import Union, Optional
 from modules.print_util import print_clr, clr, json_term
-from .util import write_txt_file, write_binary_file, fetch_screenshot
+from .util import (
+    write_txt_file,
+    write_binary_file,
+    fetch_screenshot,
+    fetch_preview,
+    print_locale_status,
+    print_media_set_status,
+    print_media_status,
+)
 
 
 def download_version(
@@ -37,10 +45,11 @@ def download_version(
     version_platform = version["attributes"]["platform"]
 
     print_clr(
-        f"{colorama.Fore.GREEN}Downloading app version: ",
-        f"{colorama.Fore.BLUE}{version_id}{colorama.Fore.RESET}, ",
-        f"{colorama.Fore.CYAN}{version_platform}, ",
-        f"{colorama.Fore.CYAN}{version_state}",
+        f"{colorama.Fore.CYAN}{version_state} ",
+        f"{colorama.Fore.CYAN + colorama.Style.DIM}{{{version_platform}}}",
+        " - ",
+        f"{colorama.Style.DIM}{version_id}",
+        " - downloading app version",
     )
 
     # Version Localizations
@@ -56,11 +65,7 @@ def download_version(
         screenshots_dir = os.path.join(loc_dir, "screenshots")
         previews_dir = os.path.join(loc_dir, "previews")
 
-        print_clr(
-            f"{colorama.Fore.GREEN}Locale: ",
-            f"{colorama.Fore.MAGENTA}{locale} ",
-            f"{colorama.Fore.BLUE}{loc_id}",
-        )
+        print_locale_status(locale, colorama.Fore.CYAN, "downloading version locale")
 
         # Locale directories
         os.makedirs(name=loc_dir, exist_ok=True)
@@ -84,6 +89,9 @@ def download_version(
             ss_set_dir = os.path.join(screenshots_dir, ss_display_type)
 
             # Screenshot Set directory
+            print_media_set_status(
+                ss_display_type, colorama.Fore.CYAN, "downloading screenshot set"
+            )
             os.makedirs(name=ss_set_dir, exist_ok=True)
 
             screenshots = appstore.get_screenshots(
@@ -93,16 +101,24 @@ def download_version(
             for screenshot in screenshots:
                 ss_filename = screenshot["attributes"]["fileName"]
                 ss_path = os.path.join(ss_set_dir, ss_filename)
-                print(ss_path)
 
                 response = fetch_screenshot(screenshot)
-                if response.ok:
+                if response is None:
+                    print_media_status(
+                        ss_filename, colorama.Fore.RED, "no asset (in processing)"
+                    )
+                elif response.ok:
+                    print_media_status(
+                        ss_filename, colorama.Fore.CYAN, "writing to disk"
+                    )
                     write_binary_file(
                         path=ss_path,
                         content=response.content,
                     )
                 else:
-                    print_clr(colorama.Fore.RED + "FAILED")
+                    print_media_status(
+                        ss_filename, colorama.Fore.RED, "download failed"
+                    )
 
         preview_sets = appstore.get_preview_sets(
             localization_id=loc_id, access_token=access_token
@@ -114,6 +130,9 @@ def download_version(
             preview_set_dir = os.path.join(previews_dir, preview_type)
 
             # Preview Set directory
+            print_media_set_status(
+                preview_type, colorama.Fore.CYAN, "downloading preview set"
+            )
             os.makedirs(name=preview_set_dir, exist_ok=True)
 
             previews = appstore.get_previews(
@@ -123,20 +142,24 @@ def download_version(
             for preview in previews:
                 preview_filename = preview["attributes"]["fileName"]
                 preview_path = os.path.join(preview_set_dir, preview_filename)
-                print(preview_path)
 
-                json_term(preview)
-                print_clr(colorama.Fore.RED + "PREVIEW DOWNLOAD NOT IMPLEMENTED")
-                # TODO: add fetch_preview functionality similar to screenshots
-
-                # response = fetch_screenshot(screenshot)
-                # if response.ok:
-                #     write_binary_file(
-                #         path=ss_path,
-                #         content=response.content,
-                #     )
-                # else:
-                #     print_clr(colorama.Fore.RED + "FAILED")
+                response = fetch_preview(preview)
+                if response is None:
+                    print_media_status(
+                        preview_filename, colorama.Fore.RED, "no asset (in processing)"
+                    )
+                elif response.ok:
+                    print_media_status(
+                        preview_filename, colorama.Fore.CYAN, "writing to disk"
+                    )
+                    write_binary_file(
+                        path=preview_path,
+                        content=response.content,
+                    )
+                else:
+                    print_media_status(
+                        preview_filename, colorama.Fore.RED, "download failed"
+                    )
 
 
 def download_info(
@@ -163,9 +186,10 @@ def download_info(
     info_state = info["attributes"]["appStoreState"]
 
     print_clr(
-        f"{colorama.Fore.GREEN}Downloading app info: ",
-        f"{colorama.Fore.BLUE}{info_id}{colorama.Fore.RESET}, ",
         f"{colorama.Fore.CYAN}{info_state}",
+        " - ",
+        f"{colorama.Style.DIM}{info_id}",
+        " - downloading app info",
     )
 
     # Info Localizations
@@ -174,16 +198,11 @@ def download_info(
     )
 
     for loc in localizations:
-        loc_id = loc["id"]
         loc_attr = loc["attributes"]
         locale = loc_attr["locale"]
         loc_dir = os.path.join(app_dir, locale)
 
-        print_clr(
-            f"{colorama.Fore.GREEN}Locale: ",
-            f"{colorama.Fore.MAGENTA}{locale} ",
-            f"{colorama.Fore.BLUE}{loc_id}",
-        )
+        print_locale_status(locale, colorama.Fore.CYAN, "downloading info locale")
 
         # Locale directory
         os.makedirs(name=loc_dir, exist_ok=True)
