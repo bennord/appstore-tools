@@ -1,2 +1,3 @@
-run.config
-appstore/
+/run.config
+/appstore/
+.mypy_cache/

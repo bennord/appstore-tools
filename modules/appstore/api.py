@@ -1,271 +1,38 @@
-import jwt
-import time
 import requests
 import json
 import gzip
 import colorama
 import logging
 from enum import Enum, auto
-from .print_util import json_term, clr
+from modules.print_util import json_term, clr
+from .types import (
+    Platform,
+    PlatformList,
+    ScreenshotDisplayType,
+    VersionState,
+    VersionStateList,
+    InfoAttributes,
+    InfoLocalizationAttributes,
+    VersionAttributes,
+    VersionLocalizationAttributes,
+)
+from .util import enum_name, enum_names, editable_version_states
+from .fetch import fetch
+from .exceptions import ResourceNotFoundException
+from .fetch import fetch, FetchMethod
 
 # TODO: remove pylint "disable" directives when pylint supports python 3.9 completely
 from typing import TypedDict, Optional, Union, Literal, Sequence
-
-APPSTORE_URI_ROOT = "https://api.appstoreconnect.apple.com/v1"
-APPSTORE_AUDIENCE = "appstoreconnect-v1"
-APPSTORE_JWT_ALGO = "ES256"
-
-
-class ResourceNotFoundException(Exception):
-    pass
-
-
-class FetchMethod(Enum):
-    GET = auto()
-    POST = auto()
-    PATCH = auto()
-    DELETE = auto()
-
-
-class Platform(Enum):
-    IOS = auto()
-    MAC_OS = auto()
-    TV_OS = auto()
-
-
-class ReleaseType(Enum):
-    MANUAL = auto()
-    AFTER_APPROVAL = auto()
-    SCHEDULED = auto()
-
-
-class VersionState(Enum):
-    DEVELOPER_REMOVED_FROM_SALE = auto()
-    DEVELOPER_REJECTED = auto()
-    IN_REVIEW = auto()
-    INVALID_BINARY = auto()
-    METADATA_REJECTED = auto()
-    PENDING_APPLE_RELEASE = auto()
-    PENDING_CONTRACT = auto()
-    PENDING_DEVELOPER_RELEASE = auto()
-    PREPARE_FOR_SUBMISSION = auto()
-    PREORDER_READY_FOR_SALE = auto()
-    PROCESSING_FOR_APP_STORE = auto()
-    READY_FOR_SALE = auto()
-    REJECTED = auto()
-    REMOVED_FROM_SALE = auto()
-    WAITING_FOR_EXPORT_COMPLIANCE = auto()
-    WAITING_FOR_REVIEW = auto()
-    REPLACED_WITH_NEW_VERSION = auto()
-
-
-editable_version_states = [
-    VersionState.PREPARE_FOR_SUBMISSION,
-    VersionState.WAITING_FOR_REVIEW,
-    VersionState.WAITING_FOR_EXPORT_COMPLIANCE,
-    VersionState.REJECTED,
-    VersionState.METADATA_REJECTED,
-    VersionState.DEVELOPER_REJECTED,
-]
-
-live_version_state = VersionState.READY_FOR_SALE
-
-
-class ScreenshotDisplayType(Enum):
-    APP_IPHONE_65 = auto()
-    APP_IPHONE_58 = auto()
-    APP_IPHONE_55 = auto()
-    APP_IPHONE_47 = auto()
-    APP_IPHONE_40 = auto()
-    APP_IPHONE_35 = auto()
-    APP_IPAD_PRO_3GEN_129 = auto()
-    APP_IPAD_PRO_3GEN_11 = auto()
-    APP_IPAD_PRO_129 = auto()
-    APP_IPAD_105 = auto()
-    APP_IPAD_97 = auto()
-    APP_DESKTOP = auto()
-    APP_WATCH_SERIES_4 = auto()
-    APP_WATCH_SERIES_3 = auto()
-    APP_APPLE_TV = auto()
-    IMESSAGE_APP_IPHONE_65 = auto()
-    IMESSAGE_APP_IPHONE_58 = auto()
-    IMESSAGE_APP_IPHONE_55 = auto()
-    IMESSAGE_APP_IPHONE_47 = auto()
-    IMESSAGE_APP_IPHONE_40 = auto()
-    IMESSAGE_APP_IPAD_PRO_3GEN_129 = auto()
-    IMESSAGE_APP_IPAD_PRO_3GEN_11 = auto()
-    IMESSAGE_APP_IPAD_PRO_129 = auto()
-    IMESSAGE_APP_IPAD_105 = auto()
-    IMESSAGE_APP_IPAD_97 = auto()
-
-
-class MediaAssetState(Enum):
-    AWAITING_UPLOAD = auto()
-    UPLOAD_COMPLETE = auto()
-    COMPLETE = auto()
-    FAILED = auto()
-
-
-EnumList = Sequence[Union[Enum, str]]  # pylint: disable=unsubscriptable-object
-PlatformList = Sequence[Union[Platform, str]]  # pylint: disable=unsubscriptable-object
-VersionStateList = Sequence[
-    Union[VersionState, str]  # pylint: disable=unsubscriptable-object
-]
-
-
-class InfoAttributes(TypedDict, total=False):  # pylint: disable=inherit-non-class
-    primaryCategory: Optional[str]  # pylint: disable=unsubscriptable-object
-    primarySubcategoryOne: Optional[str]  # pylint: disable=unsubscriptable-object
-    primarySubcategoryTwo: Optional[str]  # pylint: disable=unsubscriptable-object
-    secondaryCategory: Optional[str]  # pylint: disable=unsubscriptable-object
-    secondarySubcategoryOne: Optional[str]  # pylint: disable=unsubscriptable-object
-    secondarySubcategoryTwo: Optional[str]  # pylint: disable=unsubscriptable-object
-
-
-class InfoLocalizationAttributes(
-    TypedDict, total=False
-):  # pylint: disable=inherit-non-class
-    name: Optional[str]  # pylint: disable=unsubscriptable-object
-    privacyPolicyText: Optional[str]  # pylint: disable=unsubscriptable-object
-    privacyPolicyUrl: Optional[str]  # pylint: disable=unsubscriptable-object
-    subtitle: Optional[str]  # pylint: disable=unsubscriptable-object
-
-
-class VersionAttributes(TypedDict, total=False):  # pylint: disable=inherit-non-class
-    copyright: Optional[str]  # pylint: disable=unsubscriptable-object
-    earliestReleaseDate: Optional[str]  # pylint: disable=unsubscriptable-object
-    releaseType: Optional[str]  # pylint: disable=unsubscriptable-object
-    usesIdfa: Optional[bool]  # pylint: disable=unsubscriptable-object
-    versionString: Optional[str]  # pylint: disable=unsubscriptable-object
-    downloadable: Optional[bool]  # pylint: disable=unsubscriptable-object
-
-
-class VersionLocalizationAttributes(
-    TypedDict, total=False
-):  # pylint: disable=inherit-non-class
-    description: Optional[str]  # pylint: disable=unsubscriptable-object
-    keywords: Optional[str]  # pylint: disable=unsubscriptable-object
-    marketingUrl: Optional[str]  # pylint: disable=unsubscriptable-object
-    promotionalText: Optional[str]  # pylint: disable=unsubscriptable-object
-    supportUrl: Optional[str]  # pylint: disable=unsubscriptable-object
-    whatsNew: Optional[str]  # pylint: disable=unsubscriptable-object
-
-
-def __name(x: Union[Enum, str]):  # pylint: disable=unsubscriptable-object
-    return x.name if isinstance(x, Enum) else x
-
-
-def __names(x_list: EnumList):
-    return (__name(x) for x in x_list)
-
-
-def version_state_is_editable(
-    version_state: Union[VersionState, str]  # pylint: disable=unsubscriptable-object
-) -> bool:
-    """Test whether or not the version state is 'editable' in the App Store."""
-    return __name(version_state) in __names(editable_version_states)
-
-
-def version_state_is_live(
-    version_state: Union[VersionState, str]  # pylint: disable=unsubscriptable-object
-) -> bool:
-    """Test whether or not the version state is 'live' in the App Store."""
-    return __name(version_state) == __name(live_version_state)
-
-
-def create_access_token(issuer_id: str, key_id: str, key: str) -> str:
-    """Create an access token for use in the AppStore Connect API."""
-
-    # The token's expiration time, in Unix epoch time; tokens that expire more than
-    # 20 minutes in the future are not valid (Ex: 1528408800)
-    experation = int(time.time()) + 20 * 60
-
-    # AppStore JWT
-    # https://developer.apple.com/documentation/appstoreconnectapi/generating_tokens_for_api_requests
-    access_token = jwt.encode(
-        {"iss": issuer_id, "exp": experation, "aud": APPSTORE_AUDIENCE},
-        key,
-        algorithm=APPSTORE_JWT_ALGO,
-        headers={"kid": key_id},
-    )
-    return access_token
-
-
-def fetch(
-    method: Union[FetchMethod, str],  # pylint: disable=unsubscriptable-object
-    path: str,
-    access_token: str,
-    headers: dict = {},
-    data=None,
-):
-    """Fetch a URL resource via the AppStore connect api."""
-    headers = {"Authorization": f"Bearer {access_token}", **headers}
-
-    url = APPSTORE_URI_ROOT + path if path.startswith("/") else path
-
-    logging.debug(
-        clr(
-            f"{colorama.Fore.GREEN}appstore.fetch: {__name(method)} {colorama.Fore.MAGENTA}{url}\n",
-            f"{colorama.Fore.BLUE}request body:\n",
-            json_term(data),
-        )
-    )
-
-    if not isinstance(method, FetchMethod):
-        try:
-            method = FetchMethod[method]
-        except KeyError:
-            raise ValueError(
-                f"{method} is not a valid FetchMethod. Options are {list(FetchMethod)}"
-            )
-    if method == FetchMethod.GET:
-        response = requests.get(url=url, headers=headers)
-    elif method == FetchMethod.POST:
-        headers["Content-Type"] = "application/json"
-        response = requests.post(url=url, headers=headers, data=json.dumps(data))
-    elif method == FetchMethod.PATCH:
-        headers["Content-Type"] = "application/json"
-        response = requests.patch(url=url, headers=headers, data=json.dumps(data))
-    elif method == FetchMethod.DELETE:
-        response = requests.delete(url=url, headers=headers)
-
-    content_type = response.headers["content-type"]
-
-    if content_type == "application/json":
-        result = response.json()
-        logging.debug(clr(f"{colorama.Fore.BLUE}response body:\n", json_term(result)))
-    elif content_type == "application/a-gzip":
-        # TODO implement stream decompress
-        zipped_data = b""
-        for chunk in response.iter_content(1024 * 1024):
-            if chunk:
-                zipped_data += chunk
-
-        unzipped_data = gzip.decompress(zipped_data)
-        result = unzipped_data.decode("utf-8")
-    else:
-        result = response
-
-    # raise exceptions for easier handling
-    if response.status_code == 404:
-        raise ResourceNotFoundException(
-            f'{method.name} {url} (HttpError {response.status_code})\n{json_term({"request": data, "response":result})}'
-        )
-    elif not response.ok:
-        raise requests.exceptions.HTTPError(
-            f'{url} {method.name} (HttpError {response.status_code})\n{json_term({"request": data, "response":result})}'
-        )
-
-    return result
 
 
 def get_categories(
     access_token: str,
     platforms: PlatformList = list(Platform),
 ):
+    """Get this list of possible categories/subcategories on the app store."""
     return fetch(
         method=FetchMethod.GET,
-        path=f"/appCategories?filter[platforms]={','.join(__names(platforms))}&exists[parent]=false&include=subcategories",
+        path=f"/appCategories?filter[platforms]={','.join(enum_names(platforms))}&exists[parent]=false&include=subcategories",
         access_token=access_token,
     )["data"]
 
@@ -273,6 +40,7 @@ def get_categories(
 def get_apps(
     access_token: str,
 ):
+    """Get all apps under the users app store account."""
     return fetch(method=FetchMethod.GET, path=f"/apps", access_token=access_token)[
         "data"
     ]
@@ -282,6 +50,7 @@ def get_app(
     app_id: str,
     access_token: str,
 ):
+    """Get app by id."""
     return fetch(
         method=FetchMethod.GET, path=f"/apps/{app_id}", access_token=access_token
     )["data"]
@@ -291,6 +60,7 @@ def get_app_id(
     bundle_id: str,
     access_token: str,
 ) -> int:
+    """Get the app id for the specified bundle id."""
     apps = get_apps(access_token)
     try:
         app_id = next(
@@ -305,6 +75,7 @@ def get_bundle_id(
     app_id: str,
     access_token: str,
 ) -> int:
+    """Get the bundle id for the specified app id."""
     app = get_app(app_id=app_id, access_token=access_token)
     return app["attributes"]["bundleId"]
 
@@ -321,7 +92,9 @@ def get_infos(
         access_token=access_token,
     )["data"]
 
-    return [v for v in versions if v["attributes"]["appStoreState"] in __names(states)]
+    return [
+        v for v in versions if v["attributes"]["appStoreState"] in enum_names(states)
+    ]
 
 
 def update_info(
@@ -430,7 +203,7 @@ def create_version(
         data={
             "data": {
                 "attributes": {
-                    "platform": __name(platform),
+                    "platform": enum_name(platform),
                     "versionString": version_string,
                 },
                 "relationships": {"app": {"data": {"id": app_id, "type": "apps"}}},
@@ -476,8 +249,8 @@ def get_versions(
     return [
         v
         for v in versions
-        if v["attributes"]["platform"] in __names(platforms)
-        and v["attributes"]["appStoreState"] in __names(states)
+        if v["attributes"]["platform"] in enum_names(platforms)
+        and v["attributes"]["appStoreState"] in enum_names(states)
     ]
 
 
@@ -608,7 +381,7 @@ def create_screenshot_set(
         access_token=access_token,
         data={
             "data": {
-                "attributes": {"screenshotDisplayType": __name(display_type)},
+                "attributes": {"screenshotDisplayType": enum_name(display_type)},
                 "relationships": {
                     "appStoreVersionLocalization": {
                         "data": {
