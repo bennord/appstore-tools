@@ -10,63 +10,6 @@ from modules.print_util import print_clr, clr, json_term
 from .util import write_txt_file, write_binary_file, fetch_screenshot
 
 
-def download_info(
-    access_token: str,
-    app_dir: str,
-    app_id: str,
-    bundle_id: str,
-    version_states: appstore.VersionStateList = list(appstore.VersionState),
-):
-    """Download the app info to the local app directory."""
-    infos = appstore.get_infos(
-        app_id=app_id,
-        access_token=access_token,
-        states=version_states,
-    )
-    if len(infos) == 0:
-        message = f"No app infos found"
-        if version_states != list(appstore.VersionState):
-            message += f": {colorama.Fore.CYAN}{version_states}{colorama.Fore.RESET}"
-        raise appstore.ResourceNotFoundException(clr(message))
-
-    info = infos[0]
-    info_id = info["id"]
-    info_state = info["attributes"]["appStoreState"]
-
-    print_clr(
-        f"{colorama.Fore.GREEN}Downloading app info: ",
-        f"{colorama.Fore.BLUE}{info_id}{colorama.Fore.RESET}, ",
-        f"{colorama.Fore.CYAN}{info_state}",
-    )
-
-    # Info Localizations
-    localizations = appstore.get_info_localizations(
-        info_id=info_id, access_token=access_token
-    )
-
-    for loc in localizations:
-        loc_id = loc["id"]
-        loc_attr = loc["attributes"]
-        locale = loc_attr["locale"]
-        loc_dir = os.path.join(app_dir, locale)
-
-        print_clr(
-            f"{colorama.Fore.GREEN}Locale: ",
-            f"{colorama.Fore.MAGENTA}{locale} ",
-            f"{colorama.Fore.BLUE}{loc_id}",
-        )
-
-        # Locale directory
-        os.makedirs(name=loc_dir, exist_ok=True)
-
-        for key in appstore.InfoLocalizationAttributes.__annotations__.keys():
-            content = loc_attr[key] if loc_attr[key] is not None else ""
-            write_txt_file(
-                path=os.path.join(loc_dir, key + ".txt"),
-                content=content,
-            )
-
-
 def download_version(
     access_token: str,
     app_dir: str,
@@ -194,6 +137,63 @@ def download_version(
                 #     )
                 # else:
                 #     print_clr(colorama.Fore.RED + "FAILED")
+
+
+def download_info(
+    access_token: str,
+    app_dir: str,
+    app_id: str,
+    bundle_id: str,
+    version_states: appstore.VersionStateList = list(appstore.VersionState),
+):
+    """Download the app info to the local app directory."""
+    infos = appstore.get_infos(
+        app_id=app_id,
+        access_token=access_token,
+        states=version_states,
+    )
+    if len(infos) == 0:
+        message = f"No app infos found"
+        if version_states != list(appstore.VersionState):
+            message += f": {colorama.Fore.CYAN}{version_states}{colorama.Fore.RESET}"
+        raise appstore.ResourceNotFoundException(clr(message))
+
+    info = infos[0]
+    info_id = info["id"]
+    info_state = info["attributes"]["appStoreState"]
+
+    print_clr(
+        f"{colorama.Fore.GREEN}Downloading app info: ",
+        f"{colorama.Fore.BLUE}{info_id}{colorama.Fore.RESET}, ",
+        f"{colorama.Fore.CYAN}{info_state}",
+    )
+
+    # Info Localizations
+    localizations = appstore.get_info_localizations(
+        info_id=info_id, access_token=access_token
+    )
+
+    for loc in localizations:
+        loc_id = loc["id"]
+        loc_attr = loc["attributes"]
+        locale = loc_attr["locale"]
+        loc_dir = os.path.join(app_dir, locale)
+
+        print_clr(
+            f"{colorama.Fore.GREEN}Locale: ",
+            f"{colorama.Fore.MAGENTA}{locale} ",
+            f"{colorama.Fore.BLUE}{loc_id}",
+        )
+
+        # Locale directory
+        os.makedirs(name=loc_dir, exist_ok=True)
+
+        for key in appstore.InfoLocalizationAttributes.__annotations__.keys():
+            content = loc_attr[key] if loc_attr[key] is not None else ""
+            write_txt_file(
+                path=os.path.join(loc_dir, key + ".txt"),
+                content=content,
+            )
 
 
 def download(
