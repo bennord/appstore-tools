@@ -9,6 +9,7 @@ from .types import (
     Platform,
     PlatformList,
     ScreenshotDisplayType,
+    PreviewType,
     VersionState,
     VersionStateList,
     InfoAttributes,
@@ -527,6 +528,59 @@ def get_preview_sets(
     )["data"]
 
 
+def create_preview_set(
+    localization_id: str,
+    preview_type: Union[PreviewType, str],  # pylint: disable=unsubscriptable-object
+    access_token: str,
+):
+    """Create a new preview set in the specified App Version Localization."""
+    return fetch(
+        method=FetchMethod.POST,
+        path=f"/appPreviewSets",
+        access_token=access_token,
+        data={
+            "data": {
+                "attributes": {"previewType": enum_name(preview_type)},
+                "relationships": {
+                    "appStoreVersionLocalization": {
+                        "data": {
+                            "id": localization_id,
+                            "type": "appStoreVersionLocalizations",
+                        }
+                    }
+                },
+                "type": "appPreviewSets",
+            }
+        },
+    )["data"]
+
+
+def delete_preview_set(
+    preview_set_id: str,
+    access_token: str,
+):
+    """Delete a preview set from the App Version Localization."""
+    fetch(
+        method=FetchMethod.DELETE,
+        path=f"/appPreviewSets/{preview_set_id}",
+        access_token=access_token,
+    )
+
+
+def update_preview_order(
+    preview_set_id: str,
+    preview_ids: Sequence[str],
+    access_token: str,
+):
+    """Update the order of the previews in a preview set."""
+    fetch(
+        method=FetchMethod.PATCH,
+        path=f"/appPreviewSets/{preview_set_id}/relationships/appPreviews",
+        access_token=access_token,
+        data={"data": [{"id": p_id, "type": "appPreviews"} for p_id in preview_ids]},
+    )
+
+
 def get_previews(
     preview_set_id: str,
     access_token: str,
@@ -537,3 +591,84 @@ def get_previews(
         path=f"/appPreviewSets/{preview_set_id}/appPreviews",
         access_token=access_token,
     )["data"]
+
+
+def get_preview(
+    preview_id: str,
+    access_token: str,
+):
+    """Get the preview info."""
+    return fetch(
+        method=FetchMethod.GET,
+        path=f"/appPreviews/{preview_id}",
+        access_token=access_token,
+    )["data"]
+
+
+def create_preview(
+    preview_set_id: str,
+    file_name: str,
+    file_size: int,
+    access_token: str,
+):
+    """Create a preview asset reservation in the specified preview set.
+    Use the upload operations in the response to upload the file parts."""
+
+    # TODO: add support for previewFrameTimeCode
+    return fetch(
+        method=FetchMethod.POST,
+        path=f"/appPreviews",
+        access_token=access_token,
+        data={
+            "data": {
+                "attributes": {"fileName": file_name, "fileSize": file_size},
+                "relationships": {
+                    "appPreviewSet": {
+                        "data": {
+                            "id": preview_set_id,
+                            "type": "appPreviewSets",
+                        }
+                    }
+                },
+                "type": "appPreviews",
+            }
+        },
+    )["data"]
+
+
+def update_preview(
+    preview_id: str,
+    uploaded: bool,
+    sourceFileChecksum: str,
+    access_token: str,
+):
+    """Update the preview to commit it after a successful upload."""
+
+    # TODO: add support for previewFrameTimeCode
+    return fetch(
+        method=FetchMethod.PATCH,
+        path=f"/appPreviews/{preview_id}",
+        access_token=access_token,
+        data={
+            "data": {
+                "id": preview_id,
+                "attributes": {
+                    "uploaded": uploaded,
+                    "sourceFileChecksum": sourceFileChecksum,
+                },
+                "type": "appPreviews",
+            }
+        },
+    )["data"]
+
+
+def delete_preview(
+    preview_id: str,
+    access_token: str,
+):
+    """Delete a preview from its preview set."""
+    fetch(
+        method=FetchMethod.DELETE,
+        path=f"/appPreviews/{preview_id}",
+        access_token=access_token,
+    )
