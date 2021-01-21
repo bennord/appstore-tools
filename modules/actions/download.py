@@ -12,6 +12,8 @@ from .util import (
     write_binary_file,
     fetch_screenshot,
     fetch_preview,
+    print_info_status,
+    print_version_status,
     print_locale_status,
     print_media_set_status,
     print_media_status,
@@ -44,12 +46,10 @@ def download_version(
     version_state = version["attributes"]["appStoreState"]
     version_platform = version["attributes"]["platform"]
 
-    print_clr(
-        f"{colorama.Fore.CYAN}{version_state} ",
-        f"{colorama.Fore.CYAN + colorama.Style.DIM}{{{version_platform}}}",
-        " - ",
-        f"{colorama.Style.DIM}{version_id}",
-        " - downloading app version",
+    print_version_status(
+        version_state,
+        version_platform,
+        "downloading app version",
     )
 
     # Version Localizations
@@ -185,12 +185,7 @@ def download_info(
     info_id = info["id"]
     info_state = info["attributes"]["appStoreState"]
 
-    print_clr(
-        f"{colorama.Fore.CYAN}{info_state}",
-        " - ",
-        f"{colorama.Style.DIM}{info_id}",
-        " - downloading app info",
-    )
+    print_info_status(info_state, "downloading app info")
 
     # Info Localizations
     localizations = appstore.get_info_localizations(

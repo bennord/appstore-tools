@@ -51,13 +51,25 @@ def read_txt_file(
         return None
 
 
+def print_info_status(info_state: str, status: str):
+    print_clr(f"{colorama.Fore.CYAN}{info_state}", f" - {status}")
+
+
+def print_version_status(version_state: str, platform: str, status: str):
+    print_clr(
+        f"{colorama.Fore.CYAN}{version_state} ",
+        f"{colorama.Fore.CYAN + colorama.Style.DIM}{{{platform}}}",
+        f" - {status}",
+    )
+
+
 def print_locale_status(locale: str, color: str, status: str):
-    print_clr(f"  {color}{locale:5}{colorama.Style.RESET_ALL} - {status}")
+    print_clr(f"  {color}{locale:5}", f" - {status}")
 
 
 def print_media_set_status(display_type: str, color: str, status: str):
-    print_clr(f"    {color}{display_type}{colorama.Style.RESET_ALL} - {status}")
+    print_clr(f"    {color}{display_type}", f" - {status}")
 
 
 def print_media_status(file_name: str, color: str, status: str):
-    print_clr(f"      {color}{file_name}{colorama.Style.RESET_ALL} - {status}")
+    print_clr(f"      {color}{file_name}", f" - {status}")
