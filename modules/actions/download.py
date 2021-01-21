@@ -18,6 +18,7 @@ from .util import (
     print_media_set_status,
     print_media_status,
 )
+from modules.tqdm_util import tqdm_with_redirect
 
 
 def download_version(
@@ -49,117 +50,133 @@ def download_version(
     print_version_status(
         version_state,
         version_platform,
-        "downloading app version",
+        "downloading app version asset list",
     )
 
-    # Version Localizations
+    # Build a full list of needed assets
     localizations = appstore.get_version_localizations(
         version_id=version_id, access_token=access_token
     )
-
+    asset_total = 0
+    asset_size_total = 0
     for loc in localizations:
-        loc_id = loc["id"]
-        loc_attr = loc["attributes"]
-        locale = loc_attr["locale"]
-        loc_dir = os.path.join(app_dir, locale)
-        screenshots_dir = os.path.join(loc_dir, "screenshots")
-        previews_dir = os.path.join(loc_dir, "previews")
-
-        print_locale_status(locale, colorama.Fore.CYAN, "downloading version locale")
-
-        # Locale directories
-        os.makedirs(name=loc_dir, exist_ok=True)
-        os.makedirs(name=screenshots_dir, exist_ok=True)
-        os.makedirs(name=previews_dir, exist_ok=True)
-
-        for key in appstore.VersionLocalizationAttributes.__annotations__.keys():
-            content = loc_attr[key] if loc_attr[key] is not None else ""
-            write_txt_file(
-                path=os.path.join(loc_dir, key + ".txt"),
-                content=content,
-            )
-
-        screenshot_sets = appstore.get_screenshot_sets(
-            localization_id=loc_id, access_token=access_token
+        loc["screenshotSets"] = appstore.get_screenshot_sets(
+            localization_id=loc["id"], access_token=access_token
         )
-
-        for ss_set in screenshot_sets:
-            ss_set_id = ss_set["id"]
-            ss_display_type = ss_set["attributes"]["screenshotDisplayType"]
-            ss_set_dir = os.path.join(screenshots_dir, ss_display_type)
-
-            # Screenshot Set directory
-            print_media_set_status(
-                ss_display_type, colorama.Fore.CYAN, "downloading screenshot set"
-            )
-            os.makedirs(name=ss_set_dir, exist_ok=True)
-
+        for ss_set in loc["screenshotSets"]:
             screenshots = appstore.get_screenshots(
-                screenshot_set_id=ss_set_id, access_token=access_token
+                screenshot_set_id=ss_set["id"], access_token=access_token
             )
+            asset_total += len(screenshots)
+            asset_size_total += sum(x["attributes"]["fileSize"] for x in screenshots)
+            ss_set["screenshots"] = screenshots
 
-            for screenshot in screenshots:
-                ss_filename = screenshot["attributes"]["fileName"]
-                ss_path = os.path.join(ss_set_dir, ss_filename)
-
-                response = fetch_screenshot(screenshot)
-                if response is None:
-                    print_media_status(
-                        ss_filename, colorama.Fore.RED, "no asset (in processing)"
-                    )
-                elif response.ok:
-                    print_media_status(
-                        ss_filename, colorama.Fore.CYAN, "writing to disk"
-                    )
-                    write_binary_file(
-                        path=ss_path,
-                        content=response.content,
-                    )
-                else:
-                    print_media_status(
-                        ss_filename, colorama.Fore.RED, "download failed"
-                    )
-
-        preview_sets = appstore.get_preview_sets(
-            localization_id=loc_id, access_token=access_token
+        loc["previewSets"] = appstore.get_preview_sets(
+            localization_id=loc["id"], access_token=access_token
         )
-
-        for preview_set in preview_sets:
-            preview_set_id = preview_set["id"]
-            preview_type = ss_set["attributes"]["previewType"]
-            preview_set_dir = os.path.join(previews_dir, preview_type)
-
-            # Preview Set directory
-            print_media_set_status(
-                preview_type, colorama.Fore.CYAN, "downloading preview set"
-            )
-            os.makedirs(name=preview_set_dir, exist_ok=True)
-
+        for preview_set in loc["previewSets"]:
             previews = appstore.get_previews(
-                preview_set_id=preview_set_id, access_token=access_token
+                preview_set_id=preview_set["id"], access_token=access_token
+            )
+            asset_total += len(previews)
+            asset_size_total += sum(x["attributes"]["fileSize"] for x in previews)
+            preview_set["previews"] = previews
+
+    # Download/Write all the assets
+    with tqdm_with_redirect(
+        total=asset_size_total, unit="B", unit_scale=True, colour="green", leave=False
+    ) as progress_bar:
+        for loc in localizations:
+            loc_attr = loc["attributes"]
+            locale = loc_attr["locale"]
+            loc_dir = os.path.join(app_dir, locale)
+            screenshots_dir = os.path.join(loc_dir, "screenshots")
+            previews_dir = os.path.join(loc_dir, "previews")
+
+            print_locale_status(
+                locale, colorama.Fore.CYAN, "downloading version locale"
             )
 
-            for preview in previews:
-                preview_filename = preview["attributes"]["fileName"]
-                preview_path = os.path.join(preview_set_dir, preview_filename)
+            # Locale directories
+            os.makedirs(name=loc_dir, exist_ok=True)
+            os.makedirs(name=screenshots_dir, exist_ok=True)
+            os.makedirs(name=previews_dir, exist_ok=True)
 
-                response = fetch_preview(preview)
-                if response is None:
-                    print_media_status(
-                        preview_filename, colorama.Fore.RED, "no asset (in processing)"
-                    )
-                elif response.ok:
-                    print_media_status(
-                        preview_filename, colorama.Fore.CYAN, "writing to disk"
-                    )
-                    write_binary_file(
-                        path=preview_path,
-                        content=response.content,
-                    )
-                else:
-                    print_media_status(
-                        preview_filename, colorama.Fore.RED, "download failed"
-                    )
+            for key in appstore.VersionLocalizationAttributes.__annotations__.keys():
+                content = loc_attr[key] if loc_attr[key] is not None else ""
+                write_txt_file(
+                    path=os.path.join(loc_dir, key + ".txt"),
+                    content=content,
+                )
+
+            for ss_set in loc["screenshotSets"]:
+                ss_display_type = ss_set["attributes"]["screenshotDisplayType"]
+                ss_set_dir = os.path.join(screenshots_dir, ss_display_type)
+
+                # Screenshot Set directory
+                print_media_set_status(
+                    ss_display_type, colorama.Fore.CYAN, "downloading screenshot set"
+                )
+                os.makedirs(name=ss_set_dir, exist_ok=True)
+
+                for screenshot in ss_set["screenshots"]:
+                    file_name = screenshot["attributes"]["fileName"]
+                    file_size = screenshot["attributes"]["fileSize"]
+                    file_path = os.path.join(ss_set_dir, file_name)
+
+                    response = fetch_screenshot(screenshot)
+                    if response is None:
+                        print_media_status(
+                            file_name, colorama.Fore.RED, "no asset (in processing)"
+                        )
+                    elif response.ok:
+                        print_media_status(
+                            file_name, colorama.Fore.CYAN, "writing to disk"
+                        )
+                        write_binary_file(
+                            path=file_path,
+                            content=response.content,
+                        )
+                    else:
+                        print_media_status(
+                            file_name, colorama.Fore.RED, "download failed"
+                        )
+                    progress_bar.update(file_size)
+
+            for preview_set in loc["previewSets"]:
+                preview_type = ss_set["attributes"]["previewType"]
+                preview_set_dir = os.path.join(previews_dir, preview_type)
+
+                # Preview Set directory
+                print_media_set_status(
+                    preview_type, colorama.Fore.CYAN, "downloading preview set"
+                )
+                os.makedirs(name=preview_set_dir, exist_ok=True)
+
+                for preview in preview_set["previews"]:
+                    file_name = preview["attributes"]["fileName"]
+                    file_path = os.path.join(preview_set_dir, file_name)
+
+                    response = fetch_preview(preview)
+                    if response is None:
+                        print_media_status(
+                            file_name,
+                            colorama.Fore.RED,
+                            "no asset (in processing)",
+                        )
+                    elif response.ok:
+                        print_media_status(
+                            file_name, colorama.Fore.CYAN, "writing to disk"
+                        )
+                        write_binary_file(
+                            path=file_path,
+                            content=response.content,
+                        )
+                    else:
+                        print_media_status(
+                            file_name, colorama.Fore.RED, "download failed"
+                        )
+                    progress_bar.update(file_size)
 
 
 def download_info(

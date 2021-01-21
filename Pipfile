@@ -11,6 +11,7 @@ colorama = "*"
 Pygments = "*"
 ConfigArgParse = "*"
 argparse-color-formatter = "*"
+tqdm = "*"
 
 [dev-packages]
 pylint = "*"
