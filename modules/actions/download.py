@@ -29,7 +29,7 @@ def download_version(
     platforms: appstore.PlatformList,
     version_states: appstore.VersionStateList = list(appstore.VersionState),
 ):
-    """Download the app version localized data and screenshots to the local app directory."""
+    """Download the app version localized strings and media (screenshots/previews) to the app directory."""
     versions = appstore.get_versions(
         app_id=app_id,
         access_token=access_token,
@@ -63,13 +63,13 @@ def download_version(
         loc["screenshotSets"] = appstore.get_screenshot_sets(
             localization_id=loc["id"], access_token=access_token
         )
-        for ss_set in loc["screenshotSets"]:
+        for screenshot_set in loc["screenshotSets"]:
             screenshots = appstore.get_screenshots(
-                screenshot_set_id=ss_set["id"], access_token=access_token
+                screenshot_set_id=screenshot_set["id"], access_token=access_token
             )
             asset_total += len(screenshots)
             asset_size_total += sum(x["attributes"]["fileSize"] for x in screenshots)
-            ss_set["screenshots"] = screenshots
+            screenshot_set["screenshots"] = screenshots
 
         loc["previewSets"] = appstore.get_preview_sets(
             localization_id=loc["id"], access_token=access_token
@@ -109,20 +109,20 @@ def download_version(
                     content=content,
                 )
 
-            for ss_set in loc["screenshotSets"]:
-                ss_display_type = ss_set["attributes"]["screenshotDisplayType"]
-                ss_set_dir = os.path.join(screenshots_dir, ss_display_type)
+            for screenshot_set in loc["screenshotSets"]:
+                display_type = screenshot_set["attributes"]["screenshotDisplayType"]
+                screenshot_set_dir = os.path.join(screenshots_dir, display_type)
 
                 # Screenshot Set directory
                 print_media_set_status(
-                    ss_display_type, colorama.Fore.CYAN, "downloading screenshot set"
+                    display_type, colorama.Fore.CYAN, "downloading screenshot set"
                 )
-                os.makedirs(name=ss_set_dir, exist_ok=True)
+                os.makedirs(name=screenshot_set_dir, exist_ok=True)
 
-                for screenshot in ss_set["screenshots"]:
+                for screenshot in screenshot_set["screenshots"]:
                     file_name = screenshot["attributes"]["fileName"]
                     file_size = screenshot["attributes"]["fileSize"]
-                    file_path = os.path.join(ss_set_dir, file_name)
+                    file_path = os.path.join(screenshot_set_dir, file_name)
 
                     response = fetch_screenshot(screenshot)
                     if response is None:
@@ -144,7 +144,7 @@ def download_version(
                     progress_bar.update(file_size)
 
             for preview_set in loc["previewSets"]:
-                preview_type = ss_set["attributes"]["previewType"]
+                preview_type = preview_set["attributes"]["previewType"]
                 preview_set_dir = os.path.join(previews_dir, preview_type)
 
                 # Preview Set directory

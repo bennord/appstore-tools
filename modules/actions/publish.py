@@ -10,80 +10,14 @@ from .util import (
     print_media_set_status,
     print_media_status,
 )
-from typing import Union
+from typing import Union, Sequence
 
 
-def publish_screenshot(
-    access_token: str,
-    screenshot_path: str,
-    screenshot_set_id: str,
-):
-    if not os.path.isfile(screenshot_path):
-        raise FileNotFoundError("Screenshot path does not exist: {screenshot_path}")
-
-    _, file_name = os.path.split(screenshot_path)
-    file_stat = os.stat(screenshot_path)
-    file_hash = hashlib.md5()
-
-    # Create
-    print_media_status(
-        file_name,
-        colorama.Fore.CYAN,
-        "reserving asset",
-    )
-    screenshot = appstore.create_screenshot(
-        screenshot_set_id=screenshot_set_id,
-        file_name=file_name,
-        file_size=file_stat.st_size,
-        access_token=access_token,
-    )
-
-    screenshot_id = screenshot["id"]
-    upload_operations = screenshot["attributes"]["uploadOperations"]
-
-    # Upload
-    for op in upload_operations:
-        method: str = op["method"]
-        url: str = op["url"]
-        headers: dict = {}
-        for h in op["requestHeaders"]:
-            headers[h["name"]] = h["value"]
-        length: int = op["length"]
-        offset: int = op["offset"]
-
-        with open(screenshot_path, "rb") as file:
-            file.seek(offset)
-            file_chunk = file.read(length)
-
-        file_hash.update(file_chunk)
-        print_media_status(
-            file_name,
-            colorama.Fore.CYAN,
-            f"uploading chunk (offset: {offset}, length: {length})",
-        )
-        requests.request(method=method, url=url, headers=headers, data=file_chunk)
-
-    # Commit
-    print_media_status(
-        file_name,
-        colorama.Fore.CYAN,
-        "commiting upload",
-    )
-    checksum = file_hash.hexdigest()
-    screenshot = appstore.update_screenshot(
-        screenshot_id=screenshot_id,
-        uploaded=True,
-        sourceFileChecksum=checksum,
-        access_token=access_token,
-    )
-
-
-def screenshot_checksum_matches(screenshot, screenshot_set_dir: str) -> bool:
-    """Checks if the appstore checksum matches the asset checksum"""
-    file_name = screenshot["attributes"]["fileName"]
-    file_path = os.path.join(screenshot_set_dir, file_name)
-
-    appstore_checksum = screenshot["attributes"]["sourceFileChecksum"]
+def media_checksum_ok(media, media_asset_dir: str) -> bool:
+    """Checks if the appstore checksum matches the asset checksum."""
+    file_name = media["attributes"]["fileName"]
+    file_path = os.path.join(media_asset_dir, file_name)
+    appstore_checksum = media["attributes"]["sourceFileChecksum"]
 
     if appstore_checksum is None:
         print_media_status(
@@ -102,14 +36,14 @@ def screenshot_checksum_matches(screenshot, screenshot_set_dir: str) -> bool:
         return False
 
     with open(file_path, "rb") as file:
-        checksum = hashlib.md5(file.read()).hexdigest()
-        if checksum == appstore_checksum:
+        asset_checksum = hashlib.md5(file.read()).hexdigest()
+        if asset_checksum == appstore_checksum:
             print_media_status(
                 file_name,
                 colorama.Fore.CYAN + colorama.Style.DIM,
                 clr(
                     f"checksum matched: ",
-                    f"{colorama.Style.DIM}{checksum}",
+                    f"{colorama.Style.DIM}{asset_checksum}",
                 ),
             )
         else:
@@ -118,10 +52,102 @@ def screenshot_checksum_matches(screenshot, screenshot_set_dir: str) -> bool:
                 colorama.Fore.CYAN,
                 clr(
                     f"checksum changed: ",
-                    f"{colorama.Style.DIM}{appstore_checksum} -> {checksum}",
+                    f"{colorama.Style.DIM}{appstore_checksum} -> {asset_checksum}",
                 ),
             )
-        return checksum == appstore_checksum
+        return asset_checksum == appstore_checksum
+
+
+def upload_media(media, media_asset_path: str) -> str:
+    """Upload media asset (screenshot or preview) to the appstore.
+
+    Returns:
+        str: checksum
+    """
+    file_hash = hashlib.md5()
+    upload_operations = media["attributes"]["uploadOperations"]
+
+    for op in upload_operations:
+        method: str = op["method"]
+        url: str = op["url"]
+        headers: dict = {}
+        for h in op["requestHeaders"]:
+            headers[h["name"]] = h["value"]
+        length: int = op["length"]
+        offset: int = op["offset"]
+
+        with open(media_asset_path, "rb") as file:
+            file.seek(offset)
+            file_chunk = file.read(length)
+
+        file_hash.update(file_chunk)
+        print_media_status(
+            media_asset_path,
+            colorama.Fore.CYAN,
+            f"uploading chunk (offset: {offset}, length: {length})",
+        )
+        requests.request(method=method, url=url, headers=headers, data=file_chunk)
+    return file_hash.hexdigest()
+
+
+def get_media_file_names(media: Sequence[dict]):
+    return [x["attributes"]["fileName"] for x in media]
+
+
+def get_asset_file_names(asset_dir: str):
+    return [
+        x for x in os.listdir(asset_dir) if os.path.isfile(os.path.join(asset_dir, x))
+    ]
+
+
+def get_new_file_paths(media: Sequence[dict], asset_dir: str):
+    media_file_names = get_media_file_names(media)
+    asset_file_names = get_asset_file_names(asset_dir)
+    return [
+        os.path.join(asset_dir, x)
+        for x in asset_file_names
+        if x not in media_file_names
+    ]
+
+
+def publish_screenshot(
+    access_token: str,
+    screenshot_path: str,
+    screenshot_set_id: str,
+):
+    if not os.path.isfile(screenshot_path):
+        raise FileNotFoundError(f"Screenshot path does not exist: {screenshot_path}")
+
+    _, file_name = os.path.split(screenshot_path)
+    file_stat = os.stat(screenshot_path)
+
+    # Create
+    print_media_status(
+        file_name,
+        colorama.Fore.CYAN,
+        "reserving asset",
+    )
+    screenshot = appstore.create_screenshot(
+        screenshot_set_id=screenshot_set_id,
+        file_name=file_name,
+        file_size=file_stat.st_size,
+        access_token=access_token,
+    )
+    # Upload
+    checksum = upload_media(media=screenshot, media_asset_path=screenshot_path)
+
+    # Commit
+    print_media_status(
+        file_name,
+        colorama.Fore.CYAN,
+        "commiting upload",
+    )
+    screenshot = appstore.update_screenshot(
+        screenshot_id=screenshot["id"],
+        uploaded=True,
+        sourceFileChecksum=checksum,
+        access_token=access_token,
+    )
 
 
 def publish_screenshots(
@@ -137,9 +163,7 @@ def publish_screenshots(
         screenshot_set_id=screenshot_set_id, access_token=access_token
     )
     for screenshot in screenshots:
-        if not screenshot_checksum_matches(
-            screenshot=screenshot, screenshot_set_dir=screenshot_set_dir
-        ):
+        if not media_checksum_ok(media=screenshot, media_asset_dir=screenshot_set_dir):
             appstore.delete_screenshot(
                 screenshot_id=screenshot["id"], access_token=access_token
             )
@@ -148,16 +172,10 @@ def publish_screenshots(
     screenshots = appstore.get_screenshots(
         screenshot_set_id=screenshot_set_id, access_token=access_token
     )
-    screenshot_file_names = [s["attributes"]["fileName"] for s in screenshots]
-    asset_file_names = [
-        x
-        for x in os.listdir(screenshot_set_dir)
-        if os.path.isfile(os.path.join(screenshot_set_dir, x))
-    ]
-    new_file_names = [x for x in asset_file_names if x not in screenshot_file_names]
 
-    for file_name in new_file_names:
-        file_path = os.path.join(screenshot_set_dir, file_name)
+    # Publish
+    new_file_paths = get_new_file_paths(screenshots, screenshot_set_dir)
+    for file_path in new_file_paths:
         publish_screenshot(
             access_token=access_token,
             screenshot_path=file_path,
@@ -210,34 +228,179 @@ def publish_screenshot_sets(
         print_media_set_status(
             display_type, colorama.Fore.YELLOW, "creating display type"
         )
-        ss_set = appstore.create_screenshot_set(
+        screenshot_set = appstore.create_screenshot_set(
             localization_id=localization_id,
             display_type=display_type,
             access_token=access_token,
         )
-        screenshot_sets.append(ss_set)
+        screenshot_sets.append(screenshot_set)
 
-    for ss_set in screenshot_sets:
-        ss_set_id = ss_set["id"]
-        display_type = ss_set["attributes"]["screenshotDisplayType"]
-        ss_set_dir = os.path.join(screenshots_dir, display_type)
+    for screenshot_set in screenshot_sets:
+        screenshot_set_id = screenshot_set["id"]
+        display_type = screenshot_set["attributes"]["screenshotDisplayType"]
+        screenshot_set_dir = os.path.join(screenshots_dir, display_type)
 
         # Delete removed display types
-        if not os.path.isdir(ss_set_dir):
+        if not os.path.isdir(screenshot_set_dir):
             print_media_set_status(
                 display_type, colorama.Fore.RED, "deleting display type"
             )
             appstore.delete_screenshot_set(
-                screenshot_set_id=ss_set_id, access_token=access_token
+                screenshot_set_id=screenshot_set_id, access_token=access_token
             )
             continue
 
         # Publish
         publish_screenshots(
             access_token=access_token,
-            screenshot_set_dir=ss_set_dir,
-            screenshot_set_id=ss_set_id,
+            screenshot_set_dir=screenshot_set_dir,
+            screenshot_set_id=screenshot_set_id,
             display_type=display_type,
+        )
+
+
+def publish_preview(
+    access_token: str,
+    preview_path: str,
+    preview_set_id: str,
+):
+    if not os.path.isfile(preview_path):
+        raise FileNotFoundError(f"Preview path does not exist: {preview_path}")
+
+    _, file_name = os.path.split(preview_path)
+    file_stat = os.stat(preview_path)
+
+    # Create
+    print_media_status(
+        file_name,
+        colorama.Fore.CYAN,
+        "reserving asset",
+    )
+    preview = appstore.create_preview(
+        preview_set_id=preview_set_id,
+        file_name=file_name,
+        file_size=file_stat.st_size,
+        access_token=access_token,
+    )
+    # Upload
+    checksum = upload_media(media=preview, media_asset_path=preview_path)
+
+    # Commit
+    print_media_status(
+        file_name,
+        colorama.Fore.CYAN,
+        "commiting upload",
+    )
+    preview = appstore.update_preview(
+        preview_id=preview["id"],
+        uploaded=True,
+        sourceFileChecksum=checksum,
+        access_token=access_token,
+    )
+
+
+def publish_previews(
+    access_token: str,
+    preview_set_dir: str,
+    preview_set_id: str,
+    display_type: str,
+):
+    print_media_set_status(display_type, colorama.Fore.CYAN, "checking for changes")
+
+    # Delete outdated previews
+    previews = appstore.get_previews(
+        preview_set_id=preview_set_id, access_token=access_token
+    )
+    for preview in previews:
+        if not media_checksum_ok(media=preview, media_asset_dir=preview_set_dir):
+            appstore.delete_preview(preview_id=preview["id"], access_token=access_token)
+
+    # Create new previews
+    previews = appstore.get_previews(
+        preview_set_id=preview_set_id, access_token=access_token
+    )
+    new_file_paths = get_new_file_paths(previews, preview_set_dir)
+
+    # Publish
+    for file_path in new_file_paths:
+        publish_preview(
+            access_token=access_token,
+            preview_path=file_path,
+            preview_set_id=preview_set_id,
+        )
+
+    # Reorder the previews
+    print_media_set_status(display_type, colorama.Fore.CYAN, "sorting previews")
+    previews = appstore.get_previews(
+        preview_set_id=preview_set_id, access_token=access_token
+    )
+    previews.sort(key=lambda x: x["attributes"]["fileName"])
+    preview_ids = [x["id"] for x in previews]
+    appstore.update_preview_order(
+        preview_set_id=preview_set_id,
+        preview_ids=preview_ids,
+        access_token=access_token,
+    )
+
+
+def publish_preview_sets(
+    access_token: str,
+    localization_dir: str,
+    localization_id: str,
+):
+    """Publish the previews sets from assets on disk."""
+    previews_dir = os.path.join(localization_dir, "previews")
+    if not os.path.isdir(previews_dir):
+        print_clr(
+            f"    No previews: directory {colorama.Fore.CYAN}{previews_dir}{colorama.Fore.RESET} not found.",
+        )
+        return
+
+    preview_sets = appstore.get_preview_sets(
+        localization_id=localization_id, access_token=access_token
+    )
+
+    asset_display_types = [
+        x
+        for x in os.listdir(previews_dir)
+        if os.path.isdir(os.path.join(previews_dir, x))
+    ]
+
+    # Create new display types
+    loc_preview_types = [x["attributes"]["previewType"] for x in preview_sets]
+    new_preview_types = [x for x in asset_display_types if x not in loc_preview_types]
+    for preview_type in new_preview_types:
+        print_media_set_status(
+            preview_type, colorama.Fore.YELLOW, "creating preview type"
+        )
+        preview_set = appstore.create_preview_set(
+            localization_id=localization_id,
+            preview_type=preview_type,
+            access_token=access_token,
+        )
+        preview_sets.append(preview_set)
+
+    for preview_set in preview_sets:
+        preview_set_id = preview_set["id"]
+        preview_type = preview_set["attributes"]["previewType"]
+        preview_set_dir = os.path.join(previews_dir, preview_type)
+
+        # Delete removed display types
+        if not os.path.isdir(preview_set_dir):
+            print_media_set_status(
+                preview_type, colorama.Fore.RED, "deleting preview type"
+            )
+            appstore.delete_preview_set(
+                preview_set_id=preview_set_id, access_token=access_token
+            )
+            continue
+
+        # Publish
+        publish_previews(
+            access_token=access_token,
+            preview_set_dir=preview_set_dir,
+            preview_set_id=preview_set_id,
+            display_type=preview_type,
         )
 
 
@@ -332,6 +495,13 @@ def publish_version_localizations(
 
         # Screenshots
         publish_screenshot_sets(
+            access_token=access_token,
+            localization_dir=loc_dir,
+            localization_id=loc_id,
+        )
+
+        # Previews
+        publish_preview_sets(
             access_token=access_token,
             localization_dir=loc_dir,
             localization_id=loc_id,
