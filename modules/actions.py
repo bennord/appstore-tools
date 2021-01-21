@@ -615,6 +615,14 @@ def screenshot_checksum_matches(screenshot, screenshot_set_dir: str) -> bool:
 
     appstore_checksum = screenshot["attributes"]["sourceFileChecksum"]
 
+    if appstore_checksum is None:
+        print_screenshot_status(
+            file_name,
+            colorama.Fore.CYAN,
+            "checksum missing (in processing)",
+        )
+        return False
+
     if not os.path.isfile(file_path):
         print_screenshot_status(
             file_name,
@@ -628,7 +636,7 @@ def screenshot_checksum_matches(screenshot, screenshot_set_dir: str) -> bool:
         if checksum == appstore_checksum:
             print_screenshot_status(
                 file_name,
-                colorama.Fore.CYAN,
+                colorama.Fore.CYAN + colorama.Style.DIM,
                 clr(
                     f"checksum matched: ",
                     f"{colorama.Style.DIM}{checksum}",
@@ -953,7 +961,7 @@ def publish_info(
         f"Found {colorama.Fore.CYAN}{len(infos)}{colorama.Fore.RESET} editable app infos."
     )
 
-    file_locales = [
+    asset_locales = [
         x for x in os.listdir(app_dir) if os.path.isdir(os.path.join(app_dir, x))
     ]
 
@@ -973,7 +981,7 @@ def publish_info(
 
         # create new localizations
         info_locales = [loc["attributes"]["locale"] for loc in localizations]
-        new_locales = [x for x in file_locales if x not in info_locales]
+        new_locales = [x for x in asset_locales if x not in info_locales]
         for locale in new_locales:
             print_locale_status(
                 locale, colorama.Fore.LIGHTBLACK_EX, "locale creation not allowed"
