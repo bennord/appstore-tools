@@ -2,7 +2,7 @@
 
 Tools for the AppStore Connect API.
 
-This package is designed to provide a way to store AppStore data (descriptions, keywords, screenshots, previews, etc) in a `git` repo and publish changes from the command line or python script.
+This package provides methods to publish, download, and list information about AppStore meta-data (descriptions, keywords, screenshots, previews, etc).  Combined with a deployment workflow (such as github actions), the AppStore meta-data can be tracked and deployed along side the rest of the app's source code and assets.
 
 ## Install
 
