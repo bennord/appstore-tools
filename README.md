@@ -46,7 +46,9 @@ key-file=/home/me/AppStoreConnect_AuthKey_XXXXXXXXXX.p8
 bundle-id=com.example.myapp
 ```
 
-## Code Usage
+## Code
+
+The actions provided by the command line can also be accessed by import in a python script.
 
 ```python
 # Import the package
