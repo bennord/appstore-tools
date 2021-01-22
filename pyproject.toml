@@ -1,0 +1,29 @@
+[tool.poetry]
+name = "appstore-tools"
+version = "0.1.0"
+description = "Tools for the AppStore Connect API."
+authors = ["Ben Nordstrom <bennord@gmail.com>"]
+
+[tool.poetry.dependencies]
+python = "^3.9"
+PyJWT = "^2.0.1"
+cryptography = "^3.3.1"
+requests = "^2.25.1"
+colorama = "^0.4.4"
+Pygments = "^2.7.4"
+ConfigArgParse = "^1.2.3"
+argparse-color-formatter = "^1.2.2"
+tqdm = "^4.56.0"
+
+[tool.poetry.dev-dependencies]
+black = "^20.8b1"
+pylint = "^2.6.0"
+rope = "^0.18.0"
+mypy = "^0.790"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+appstoretools = 'run:main'

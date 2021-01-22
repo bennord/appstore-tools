@@ -2,15 +2,15 @@ import os
 import hashlib
 import colorama
 import requests
-import modules.appstore as appstore
-from modules.print_util import print_clr, clr, json_term
+from typing import Union, Sequence
+from appstore_tools import appstore
+from appstore_tools.print_util import print_clr, clr, json_term
 from .util import (
     read_txt_file,
     print_locale_status,
     print_media_set_status,
     print_media_status,
 )
-from typing import Union, Sequence
 
 
 def media_checksum_ok(media, media_asset_dir: str) -> bool:

@@ -5,7 +5,7 @@ import requests
 import gzip
 from enum import Enum, auto
 from typing import Union
-from modules.print_util import clr, json_term
+from appstore_tools.print_util import clr, json_term
 from .util import enum_name
 from .exceptions import ResourceNotFoundException
 

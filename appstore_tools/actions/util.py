@@ -3,7 +3,7 @@ import requests
 import colorama
 from typing import Union
 from enum import Enum, auto
-from modules.print_util import print_clr, clr, json_term
+from appstore_tools.print_util import print_clr, clr, json_term
 
 
 def fetch_screenshot(screenshot: dict):

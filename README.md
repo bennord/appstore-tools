@@ -5,7 +5,7 @@ Tools for interacting with the AppStore Connect api
 ### Prereqs
 
 - python (use pyenv to install `v3.9.*`)
-- pipenv (`pip install pipenv`)
+- poetry
 - black (set this as the python formatter in whatever code editor you use)
 
 ### Install
@@ -13,12 +13,11 @@ Tools for interacting with the AppStore Connect api
 Install dependencies
 
 ```
-pipenv install --dev
+poetry install
 ```
 
 ### Run
 
 ```
-pipenv shell
-python run.py [args...]
+poetry run ./run.py [args...]
 ```

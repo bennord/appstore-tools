@@ -1,9 +1,9 @@
 import logging
 import colorama
-import modules.appstore as appstore
 from enum import Enum, auto
-from modules.print_util import print_clr, clr, json_term
 from typing import Union, Optional
+from appstore_tools import appstore
+from appstore_tools.print_util import print_clr, clr, json_term
 
 
 class Verbosity(Enum):

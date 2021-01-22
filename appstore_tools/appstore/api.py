@@ -4,7 +4,7 @@ import gzip
 import colorama
 import logging
 from enum import Enum, auto
-from modules.print_util import json_term, clr
+from appstore_tools.print_util import json_term, clr
 from .types import (
     Platform,
     PlatformList,

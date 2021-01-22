@@ -1,12 +1,12 @@
 import colorama
-import modules.appstore as appstore
-import modules.command_line as command_line
 import sys
 import os
 import logging
 import requests
 from typing import Union, Optional
-from modules.print_util import print_clr, clr, json_term
+from appstore_tools import appstore, command_line
+from appstore_tools.print_util import print_clr, clr, json_term
+from appstore_tools.tqdm_util import tqdm_with_redirect
 from .util import (
     write_txt_file,
     write_binary_file,
@@ -18,7 +18,6 @@ from .util import (
     print_media_set_status,
     print_media_status,
 )
-from modules.tqdm_util import tqdm_with_redirect
 
 
 def download_version(

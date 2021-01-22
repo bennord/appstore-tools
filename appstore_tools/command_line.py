@@ -1,15 +1,15 @@
 import configargparse
 import argparse
 import logging
-import modules.command_line_actions as command_line_actions
-import modules.appstore as appstore
-import modules.actions as actions
+import appstore_tools.command_line_actions as command_line_actions
+import appstore_tools.appstore as appstore
+import appstore_tools.actions as actions
 import requests
 import sys
-from modules.print_util import print_clr, clr, clr_extra, clr_keyword, clr_usage
+from appstore_tools.print_util import print_clr, clr, clr_extra, clr_keyword, clr_usage
 import colorama
 import argparse_color_formatter
-import modules.version as version
+import appstore_tools.version as version
 
 DEFAULT_CONFIG_FILES = ["run.config"]
 DEFAULT_ASSET_DIR = "appstore"
