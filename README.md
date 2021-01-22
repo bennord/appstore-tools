@@ -46,7 +46,7 @@ key-file=/home/me/AppStoreConnect_AuthKey_XXXXXXXXXX.p8
 bundle-id=com.example.myapp
 ```
 
-## Code Ussage
+## Code Usage
 
 ```python
 # Import the package
@@ -73,7 +73,7 @@ apps = appstore.get_apps(access_token=access_token)
 
 Clone the source code
 
-```
+```zsh
 git clone https://github.com/bennord/appstore-tools.git
 ```
 
