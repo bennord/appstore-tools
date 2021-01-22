@@ -514,5 +514,3 @@ def run():
         sys.exit(error)
     except KeyboardInterrupt as error:
         sys.exit(error)
-
-    return parsed_args
