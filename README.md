@@ -29,7 +29,7 @@ appstore-tools download --bundle-id com.example.myapp --asset-dir myassets
 appstore-tools publish --bundle-id com.example.myapp --asset-dir myassets
 ```
 
-### Config
+## Usage Config
 
 Most actions will require authentication with the AppStore Connect API, as well as specifying which app to target.
 
