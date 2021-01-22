@@ -4,7 +4,7 @@ import os
 import logging
 import requests
 from typing import Union, Optional
-from appstore_tools import appstore, command_line
+from appstore_tools import appstore
 from appstore_tools.print_util import print_clr, clr, json_term
 from appstore_tools.tqdm_util import tqdm_with_redirect
 from .util import (

@@ -1,7 +1,7 @@
 import sys
 import os
 import appstore_tools.appstore as appstore
-import appstore_tools.command_line as command_line
+import appstore_tools.console as console
 import appstore_tools.actions as actions
 
 
@@ -33,7 +33,7 @@ def get_bundle_id(args, access_token):
 
 def list_categories(args):
     access_token = get_access_token(args)
-    platforms = command_line.create_platform_filter_list(args)
+    platforms = console.create_platform_filter_list(args)
 
     actions.list_categories(
         access_token=access_token,
@@ -52,8 +52,8 @@ def list_apps(args):
 def list_versions(args):
     access_token = get_access_token(args)
     app_id = get_app_id(args, access_token)
-    platforms = command_line.create_platform_filter_list(args)
-    states = command_line.create_version_state_filter_list(args)
+    platforms = console.create_platform_filter_list(args)
+    states = console.create_version_state_filter_list(args)
 
     actions.list_versions(
         access_token=access_token,
@@ -67,7 +67,7 @@ def list_versions(args):
 def list_infos(args):
     access_token = get_access_token(args)
     app_id = get_app_id(args, access_token)
-    states = command_line.create_version_state_filter_list(args)
+    states = console.create_version_state_filter_list(args)
 
     actions.list_infos(
         access_token=access_token,
@@ -80,8 +80,8 @@ def list_infos(args):
 def list_screenshots(args):
     access_token = get_access_token(args)
     app_id = get_app_id(args, access_token)
-    platforms = command_line.create_platform_filter_list(args)
-    states = command_line.create_version_state_filter_list(args)
+    platforms = console.create_platform_filter_list(args)
+    states = console.create_version_state_filter_list(args)
 
     actions.list_screenshots(
         access_token=access_token,
@@ -96,8 +96,8 @@ def list_screenshots(args):
 def list_previews(args):
     access_token = get_access_token(args)
     app_id = get_app_id(args, access_token)
-    platforms = command_line.create_platform_filter_list(args)
-    states = command_line.create_version_state_filter_list(args)
+    platforms = console.create_platform_filter_list(args)
+    states = console.create_version_state_filter_list(args)
 
     actions.list_previews(
         access_token=access_token,

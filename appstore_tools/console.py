@@ -1,7 +1,7 @@
 import configargparse
 import argparse
 import logging
-import appstore_tools.command_line_actions as command_line_actions
+import appstore_tools.console_actions as console_actions
 import appstore_tools.appstore as appstore
 import appstore_tools.actions as actions
 import requests
@@ -11,7 +11,7 @@ import colorama
 import argparse_color_formatter
 import appstore_tools.version as version
 
-DEFAULT_CONFIG_FILES = ["run.config"]
+DEFAULT_CONFIG_FILES = ["appstore_tools.config"]
 DEFAULT_ASSET_DIR = "appstore"
 
 LOGO_ART = """                                                           
@@ -291,7 +291,8 @@ def add_app_id_group(parser: configargparse.ArgumentParser):
     )
 
 
-def run_command_line():
+def run():
+    """Run appstore-tools from the command-line."""
     # Global
     global_parser = configargparse.ArgParser(
         default_config_files=DEFAULT_CONFIG_FILES,
@@ -486,21 +487,21 @@ def run_command_line():
     # Run
     try:
         if args.action == "categories":
-            command_line_actions.list_categories(args)
+            console_actions.list_categories(args)
         if args.action == "apps":
-            command_line_actions.list_apps(args)
+            console_actions.list_apps(args)
         elif args.action == "infos":
-            command_line_actions.list_infos(args)
+            console_actions.list_infos(args)
         elif args.action == "versions":
-            command_line_actions.list_versions(args)
+            console_actions.list_versions(args)
         elif args.action == "screenshots":
-            command_line_actions.list_screenshots(args)
+            console_actions.list_screenshots(args)
         elif args.action == "previews":
-            command_line_actions.list_previews(args)
+            console_actions.list_previews(args)
         elif args.action == "download":
-            command_line_actions.download(args)
+            console_actions.download(args)
         elif args.action == "publish":
-            command_line_actions.publish(args)
+            console_actions.publish(args)
     except requests.exceptions.SSLError as error:
         sys.exit(error)
     except requests.exceptions.ConnectionError as error:

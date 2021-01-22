@@ -1,4 +1,9 @@
-/run.config
+# default command line config
+/appstore_tools.config
+
+# default asset folder
 /appstore/
+
+# tool caches
 .mypy_cache/
 __pycache__/
