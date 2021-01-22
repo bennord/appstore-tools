@@ -72,27 +72,6 @@ actions.list_apps(access_token=access_token)
 
 ```
 
-## Source
-
-Clone the source code
-
-```zsh
-git clone https://github.com/bennord/appstore-tools.git
-```
-
-Install dependencies
-
-```zsh
-poetry install
-```
-
-Run from within project environment
-
-```zsh
-poetry shell
-appstore-tools --version
-```
-
 ## Asset Directory Structure
 
 The `download` and `publish` actions look for assets in the following directory structure starting at `--asset-dir ASSET_DIR`. Screenshots and Previews are sorted alphabetically in the store listing.
@@ -133,4 +112,25 @@ Likewise, to leave the screenshots (or previews) unaffected, remove the entire `
         ├── subtitle.txt
         ├── supportUrl.txt
         └── whatsNew.txt
+```
+
+## Source
+
+Clone the source code
+
+```zsh
+git clone https://github.com/bennord/appstore-tools.git
+```
+
+Install dependencies
+
+```zsh
+poetry install
+```
+
+Run from within project environment
+
+```zsh
+poetry shell
+appstore-tools --version
 ```
