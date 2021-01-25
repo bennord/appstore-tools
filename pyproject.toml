@@ -5,6 +5,7 @@ description = "Tools for the AppStore Connect API."
 authors = ["Ben Nordstrom <bennord@gmail.com>"]
 readme = "README.md"
 repository = "https://github.com/bennord/appstore-tools"
+license = MIT
 
 [tool.poetry.dependencies]
 python = "^3.9"
