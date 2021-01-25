@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "appstore-tools"
-version = "0.1.3"
+version = "0.1.4"
 description = "Tools for the AppStore Connect API."
 authors = ["Ben Nordstrom <bennord@gmail.com>"]
 readme = "README.md"
