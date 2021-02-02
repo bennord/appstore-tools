@@ -85,7 +85,7 @@ def add_config_argument(parser: configargparse.ArgumentParser):
         "-c",
         "--config-file",
         is_config_file=True,
-        help="Args that start with '--' (eg. --log-level) can also be set in a config file (run.config or specified via -c). "
+        help=f"Args that start with '--' (eg. --log-level) can also be set in a config file ({', '.join(DEFAULT_CONFIG_FILES)} or specified via -c). "
         + "Config file syntax allows: key=value, flag=true, stuff=[a,b,c] "
         + clr_extra("(details here https://goo.gl/R74nmi)")
         + ". "
