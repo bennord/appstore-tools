@@ -34,7 +34,7 @@ def download_version(
     )
     if len(versions) == 0:
         message = f"No app version found: {colorama.Fore.CYAN}{platforms}{colorama.Fore.RESET}"
-        if version_states != list(appstore.VersionState):
+        if version_states != tuple(appstore.VersionState):
             message += f", {colorama.Fore.CYAN}{version_states}{colorama.Fore.RESET}"
         raise appstore.ResourceNotFoundException(clr(message))
 
@@ -180,7 +180,7 @@ def download_info(
     app_dir: str,
     app_id: str,
     bundle_id: str,
-    version_states: appstore.VersionStateList = list(appstore.VersionState),
+    version_states: appstore.VersionStateList = tuple(appstore.VersionState),
 ):
     """Download the app info to the local app directory."""
     infos = appstore.get_infos(
@@ -190,7 +190,7 @@ def download_info(
     )
     if len(infos) == 0:
         message = f"No app infos found"
-        if version_states != list(appstore.VersionState):
+        if version_states != tuple(appstore.VersionState):
             message += f": {colorama.Fore.CYAN}{version_states}{colorama.Fore.RESET}"
         raise appstore.ResourceNotFoundException(clr(message))
 
