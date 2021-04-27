@@ -4,7 +4,7 @@ from enum import Enum, auto
 from typing import Union, Optional
 from appstore_tools import appstore
 from appstore_tools.print_util import print_clr, clr, json_term
-
+from appstore_tools.appstore.auth import AccessToken
 
 class Verbosity(Enum):
     SHORT = auto()
@@ -13,7 +13,7 @@ class Verbosity(Enum):
 
 
 def list_categories(
-    access_token: str,
+    access_token: AccessToken,
     platforms: appstore.PlatformList,
     verbosity: Verbosity = Verbosity.SHORT,
 ):
@@ -36,7 +36,7 @@ def list_categories(
         print(json_term(categories))
 
 
-def list_apps(access_token: str, verbosity: Verbosity = Verbosity.SHORT):
+def list_apps(access_token: AccessToken, verbosity: Verbosity = Verbosity.SHORT):
     """List the apps found on the appstore."""
     apps = appstore.get_apps(access_token=access_token)
     if verbosity == Verbosity.SHORT:
@@ -61,7 +61,7 @@ def list_apps(access_token: str, verbosity: Verbosity = Verbosity.SHORT):
 
 
 def list_versions(
-    access_token: str,
+    access_token: AccessToken,
     app_id: str,
     platforms: appstore.PlatformList,
     states: appstore.VersionStateList,
@@ -85,7 +85,7 @@ def list_versions(
 
 
 def list_infos(
-    access_token: str,
+    access_token: AccessToken,
     app_id: str,
     states: appstore.VersionStateList,
     verbosity: Verbosity = Verbosity.SHORT,
@@ -126,7 +126,7 @@ def list_infos(
 
 
 def list_screenshots(
-    access_token: str,
+    access_token: AccessToken,
     app_id: str,
     platforms: appstore.PlatformList,
     states: appstore.VersionStateList,
@@ -222,7 +222,7 @@ def list_screenshots(
 
 
 def list_previews(
-    access_token: str,
+    access_token: AccessToken,
     app_id: str,
     platforms: appstore.PlatformList,
     states: appstore.VersionStateList,

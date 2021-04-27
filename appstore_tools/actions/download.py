@@ -1,12 +1,9 @@
 import colorama
-import sys
 import os
-import logging
-import requests
-from typing import Union, Optional
 from appstore_tools import appstore
-from appstore_tools.print_util import print_clr, clr, json_term
+from appstore_tools.print_util import print_clr, clr
 from appstore_tools.tqdm_util import tqdm_with_redirect
+from appstore_tools.appstore.auth import AccessToken
 from .util import (
     write_txt_file,
     write_binary_file,
@@ -21,12 +18,12 @@ from .util import (
 
 
 def download_version(
-    access_token: str,
+    access_token: AccessToken,
     app_dir: str,
     app_id: str,
     bundle_id: str,
     platforms: appstore.PlatformList,
-    version_states: appstore.VersionStateList = list(appstore.VersionState),
+    version_states: appstore.VersionStateList = tuple(appstore.VersionState),
 ):
     """Download the app version localized strings and media (screenshots/previews) to the app directory."""
     versions = appstore.get_versions(
@@ -37,7 +34,7 @@ def download_version(
     )
     if len(versions) == 0:
         message = f"No app version found: {colorama.Fore.CYAN}{platforms}{colorama.Fore.RESET}"
-        if version_states != list(appstore.VersionState):
+        if version_states != tuple(appstore.VersionState):
             message += f", {colorama.Fore.CYAN}{version_states}{colorama.Fore.RESET}"
         raise appstore.ResourceNotFoundException(clr(message))
 
@@ -179,11 +176,11 @@ def download_version(
 
 
 def download_info(
-    access_token: str,
+    access_token: AccessToken,
     app_dir: str,
     app_id: str,
     bundle_id: str,
-    version_states: appstore.VersionStateList = list(appstore.VersionState),
+    version_states: appstore.VersionStateList = tuple(appstore.VersionState),
 ):
     """Download the app info to the local app directory."""
     infos = appstore.get_infos(
@@ -193,7 +190,7 @@ def download_info(
     )
     if len(infos) == 0:
         message = f"No app infos found"
-        if version_states != list(appstore.VersionState):
+        if version_states != tuple(appstore.VersionState):
             message += f": {colorama.Fore.CYAN}{version_states}{colorama.Fore.RESET}"
         raise appstore.ResourceNotFoundException(clr(message))
 
@@ -227,12 +224,12 @@ def download_info(
 
 
 def download(
-    access_token: str,
+    access_token: AccessToken,
     asset_dir: str,
     app_id: str,
     bundle_id: str,
     platforms: appstore.PlatformList,
-    version_states: appstore.VersionStateList = list(appstore.VersionState),
+    version_states: appstore.VersionStateList = tuple(appstore.VersionState),
     overwrite: bool = False,
 ):
     """Download all the app meta data to the local app directory."""
