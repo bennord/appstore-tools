@@ -12,7 +12,6 @@ class AccessToken:
 
     def __str__(self):
         if time.time() > self._expiration:
-            print('refreshing auth!')
             self._create_or_refresh_access_token()
         return self._access_token
 
