@@ -272,6 +272,17 @@ def publish_preview(
     preview_folder_path, file_name = os.path.split(preview_path)
     file_stat = os.stat(preview_path)
 
+    preview_name, preview_ext = os.path.splitext(file_name)
+
+    if preview_ext.lower() not in [".avi", ".mp4", ".mov"]:
+        if preview_ext.lower() != ".txt":
+            print_media_status(
+                file_name,
+                colorama.Fore.RED,
+                f"{preview_ext.lower()} is not a valid video file extension, skipping",
+            )
+        return
+
     # Create
     print_media_status(
         file_name,
@@ -295,13 +306,13 @@ def publish_preview(
     )
 
     preview_frame_time_code_filepath = os.path.join(
-        preview_folder_path, os.path.splitext(file_name)[0] + ".txt"
+        preview_folder_path, preview_name + ".txt"
     )
 
     preview_frame_time_code = "00:00:00:01"
     if os.path.exists(preview_frame_time_code_filepath):
         with open(
-            "preview_frame_time_code_filepath", "r"
+            preview_frame_time_code_filepath, "r"
         ) as preview_frame_time_code_file:
             preview_frame_time_code = preview_frame_time_code_file.read()
 
