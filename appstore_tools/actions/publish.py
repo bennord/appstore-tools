@@ -5,6 +5,8 @@ import requests
 from typing import Union, Sequence
 from appstore_tools import appstore
 from appstore_tools.print_util import print_clr, clr, json_term
+from appstore_tools.appstore.auth import AccessToken
+
 from .util import (
     read_txt_file,
     print_locale_status,
@@ -111,7 +113,7 @@ def get_new_file_paths(media: Sequence[dict], asset_dir: str):
 
 
 def publish_screenshot(
-    access_token: str,
+    access_token: AccessToken,
     screenshot_path: str,
     screenshot_set_id: str,
 ):
@@ -151,7 +153,7 @@ def publish_screenshot(
 
 
 def publish_screenshots(
-    access_token: str,
+    access_token: AccessToken,
     screenshot_set_dir: str,
     screenshot_set_id: str,
     display_type: str,
@@ -197,7 +199,7 @@ def publish_screenshots(
 
 
 def publish_screenshot_sets(
-    access_token: str,
+    access_token: AccessToken,
     localization_dir: str,
     localization_id: str,
 ):
@@ -260,7 +262,7 @@ def publish_screenshot_sets(
 
 
 def publish_preview(
-    access_token: str,
+    access_token: AccessToken,
     preview_path: str,
     preview_set_id: str,
 ):
@@ -300,7 +302,7 @@ def publish_preview(
 
 
 def publish_previews(
-    access_token: str,
+    access_token: AccessToken,
     preview_set_dir: str,
     preview_set_id: str,
     display_type: str,
@@ -344,7 +346,7 @@ def publish_previews(
 
 
 def publish_preview_sets(
-    access_token: str,
+    access_token: AccessToken,
     localization_dir: str,
     localization_id: str,
 ):
@@ -405,7 +407,7 @@ def publish_preview_sets(
 
 
 def publish_version_localizations(
-    access_token: str,
+    access_token: AccessToken,
     app_dir: str,
     version_id: str,
     allow_create_locale: bool = True,
@@ -509,7 +511,7 @@ def publish_version_localizations(
 
 
 def publish_version(
-    access_token: str,
+    access_token: AccessToken,
     app_dir: str,
     app_id: str,
     bundle_id: str,
@@ -583,7 +585,7 @@ def publish_version(
 
 
 def publish_info(
-    access_token: str,
+    access_token: AccessToken,
     app_dir: str,
     app_id: str,
     bundle_id: str,
@@ -675,7 +677,7 @@ def publish_info(
 
 
 def publish(
-    access_token: str,
+    access_token: AccessToken,
     asset_dir: str,
     app_id: str,
     bundle_id: str,

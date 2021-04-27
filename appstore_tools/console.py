@@ -514,3 +514,7 @@ def run():
         sys.exit(error)
     except KeyboardInterrupt as error:
         sys.exit(error)
+
+
+if __name__ == '__main__':
+    run()
