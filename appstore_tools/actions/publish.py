@@ -123,6 +123,16 @@ def publish_screenshot(
     _, file_name = os.path.split(screenshot_path)
     file_stat = os.stat(screenshot_path)
 
+    _, screenshot_ext = os.path.splitext(file_name)
+
+    if screenshot_ext.lower() not in [".jpg", ".jpeg", ".png", ".tif", ".tiff", ".bmp"]:
+        print_media_status(
+            file_name,
+            colorama.Fore.RED,
+            f"{screenshot_ext.lower()} is not a valid screenshot file extension, skipping",
+        )
+        return
+
     # Create
     print_media_status(
         file_name,
