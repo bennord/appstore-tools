@@ -639,16 +639,11 @@ def create_preview(
 
 
 def fetch_status(preview_id: str, access_token: AccessToken):
-    return (
-        fetch(
-            method=FetchMethod.GET,
-            path=f"/appPreviews/{preview_id}",
-            access_token=access_token,
-        )["data"]
-        .get("attributes", {})
-        .get("assetDeliveryState", {})
-        .get("state")
-    )
+    return fetch(
+        method=FetchMethod.GET,
+        path=f"/appPreviews/{preview_id}",
+        access_token=access_token,
+    )["data"]["attributes"]["assetDeliveryState"]["state"]
 
 
 def wait_for_uploaded_status(preview_id: str, access_token: AccessToken):
