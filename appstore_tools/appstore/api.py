@@ -1,3 +1,5 @@
+import time
+
 import requests
 import json
 import gzip
@@ -615,7 +617,6 @@ def create_preview(
     """Create a preview asset reservation in the specified preview set.
     Use the upload operations in the response to upload the file parts."""
 
-    # TODO: add support for previewFrameTimeCode
     return fetch(
         method=FetchMethod.POST,
         path=f"/appPreviews",
@@ -637,16 +638,39 @@ def create_preview(
     )["data"]
 
 
+def fetch_status(preview_id: str, access_token: AccessToken):
+    return (
+        fetch(
+            method=FetchMethod.GET,
+            path=f"/appPreviews/{preview_id}",
+            access_token=access_token,
+        )["data"]
+        .get("attributes", {})
+        .get("assetDeliveryState", {})
+        .get("state")
+    )
+
+
+def wait_for_uploaded_status(preview_id: str, access_token: AccessToken):
+    last_status = fetch_status(preview_id, access_token)
+    backoff_time = 0.5
+    while last_status == "UPLOAD_COMPLETE":
+        time.sleep(backoff_time)
+        last_status = fetch_status(preview_id, access_token)
+        backoff_time *= 2
+    return last_status
+
+
 def update_preview(
     preview_id: str,
     uploaded: bool,
-    sourceFileChecksum: str,
+    source_file_checksum: str,
     access_token: AccessToken,
+    preview_frame_time_code: str,
 ):
-    """Update the preview to commit it after a successful upload."""
+    """Update & validate the preview to commit it after a successful upload."""
 
-    # TODO: add support for previewFrameTimeCode
-    return fetch(
+    fetch(
         method=FetchMethod.PATCH,
         path=f"/appPreviews/{preview_id}",
         access_token=access_token,
@@ -655,12 +679,36 @@ def update_preview(
                 "id": preview_id,
                 "attributes": {
                     "uploaded": uploaded,
-                    "sourceFileChecksum": sourceFileChecksum,
+                    "sourceFileChecksum": source_file_checksum,
                 },
                 "type": "appPreviews",
             }
         },
-    )["data"]
+    )
+
+    upload_status = wait_for_uploaded_status(preview_id, access_token)
+
+    if upload_status == "COMPLETE":
+        return fetch(
+            method=FetchMethod.PATCH,
+            path=f"/appPreviews/{preview_id}",
+            access_token=access_token,
+            data={
+                "data": {
+                    "id": preview_id,
+                    "attributes": {
+                        "previewFrameTimeCode": preview_frame_time_code,
+                    },
+                    "type": "appPreviews",
+                }
+            },
+        )
+
+    return fetch(
+        method=FetchMethod.DELETE,
+        path=f"/appPreviews/{preview_id}",
+        access_token=access_token,
+    )
 
 
 def delete_preview(

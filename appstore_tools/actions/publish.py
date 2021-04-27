@@ -269,7 +269,7 @@ def publish_preview(
     if not os.path.isfile(preview_path):
         raise FileNotFoundError(f"Preview path does not exist: {preview_path}")
 
-    _, file_name = os.path.split(preview_path)
+    preview_folder_path, file_name = os.path.split(preview_path)
     file_stat = os.stat(preview_path)
 
     # Create
@@ -293,12 +293,43 @@ def publish_preview(
         colorama.Fore.CYAN,
         "commiting upload",
     )
+
+    preview_frame_time_code_filepath = os.path.join(
+        preview_folder_path, os.path.splitext(file_name)[0] + ".txt"
+    )
+
+    preview_frame_time_code = "00:00:00:01"
+    if os.path.exists(preview_frame_time_code_filepath):
+        with open(
+            "preview_frame_time_code_filepath", "r"
+        ) as preview_frame_time_code_file:
+            preview_frame_time_code = preview_frame_time_code_file.read()
+
     preview = appstore.update_preview(
         preview_id=preview["id"],
         uploaded=True,
-        sourceFileChecksum=checksum,
+        source_file_checksum=checksum,
         access_token=access_token,
+        preview_frame_time_code=preview_frame_time_code,
     )
+
+    if hasattr(preview, "status_code") and preview.status_code == 204:
+        print_media_status(
+            file_name,
+            colorama.Fore.RED,
+            "invalid app preview, asset deleted",
+        )
+    else:
+        print_media_status(
+            file_name,
+            colorama.Fore.CYAN,
+            "valid app preview",
+        )
+        print_media_status(
+            file_name,
+            colorama.Fore.CYAN,
+            f"poster frame time code set at {preview_frame_time_code}",
+        )
 
 
 def publish_previews(
