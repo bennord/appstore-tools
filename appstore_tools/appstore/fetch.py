@@ -8,6 +8,7 @@ from typing import Union
 from appstore_tools.print_util import clr, json_term
 from .util import enum_name
 from .exceptions import ResourceNotFoundException
+from appstore_tools.appstore.auth import AccessToken
 
 APPSTORE_URI_ROOT = "https://api.appstoreconnect.apple.com/v1"
 
@@ -22,7 +23,7 @@ class FetchMethod(Enum):
 def fetch(
     method: Union[FetchMethod, str],  # pylint: disable=unsubscriptable-object
     path: str,
-    access_token: str,
+    access_token: AccessToken,
     headers: dict = {},
     data=None,
 ):

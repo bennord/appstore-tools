@@ -5,6 +5,7 @@ import colorama
 import logging
 from enum import Enum, auto
 from appstore_tools.print_util import json_term, clr
+from appstore_tools.appstore.auth import AccessToken
 from .types import (
     Platform,
     PlatformList,
@@ -27,7 +28,7 @@ from typing import TypedDict, Optional, Union, Literal, Sequence
 
 
 def get_categories(
-    access_token: str,
+    access_token: AccessToken,
     platforms: PlatformList = list(Platform),
 ):
     """Get this list of possible categories/subcategories on the app store."""
@@ -39,7 +40,7 @@ def get_categories(
 
 
 def get_apps(
-    access_token: str,
+    access_token: AccessToken,
 ):
     """Get all apps under the users app store account."""
     return fetch(method=FetchMethod.GET, path=f"/apps", access_token=access_token)[
@@ -49,7 +50,7 @@ def get_apps(
 
 def get_app(
     app_id: str,
-    access_token: str,
+    access_token: AccessToken,
 ):
     """Get app by id."""
     return fetch(
@@ -59,7 +60,7 @@ def get_app(
 
 def get_app_id(
     bundle_id: str,
-    access_token: str,
+    access_token: AccessToken,
 ) -> int:
     """Get the app id for the specified bundle id."""
     apps = get_apps(access_token)
@@ -74,7 +75,7 @@ def get_app_id(
 
 def get_bundle_id(
     app_id: str,
-    access_token: str,
+    access_token: AccessToken,
 ) -> int:
     """Get the bundle id for the specified app id."""
     app = get_app(app_id=app_id, access_token=access_token)
@@ -83,7 +84,7 @@ def get_bundle_id(
 
 def get_infos(
     app_id: str,
-    access_token: str,
+    access_token: AccessToken,
     states: VersionStateList = list(VersionState),
 ):
     """Get the list of app infos, optionally filtering by appstore state."""
@@ -101,7 +102,7 @@ def get_infos(
 def update_info(
     info_id: str,
     info_attributes: InfoAttributes,
-    access_token: str,
+    access_token: AccessToken,
 ):
     """Update the non-localized AppInfo data."""
     relationships = {}
@@ -124,7 +125,7 @@ def update_info(
 
 def get_info_localizations(
     info_id: str,
-    access_token: str,
+    access_token: AccessToken,
 ):
     """Get the list of app info localizations."""
     return fetch(
@@ -138,7 +139,7 @@ def create_info_localization(
     info_id: str,
     locale: str,
     info_localization_attributes: InfoLocalizationAttributes,
-    access_token: str,
+    access_token: AccessToken,
 ):
     """Creates a new app store info localization."""
     return fetch(
@@ -160,7 +161,7 @@ def create_info_localization(
 def update_info_localization(
     info_localization_id: str,
     info_localization_attributes: InfoLocalizationAttributes,
-    access_token: str,
+    access_token: AccessToken,
 ):
     """Updates the meta data for the specified App Info Localization.
     Some data fields require the App Version to be in an editable state."""
@@ -180,7 +181,7 @@ def update_info_localization(
 
 def delete_info_localization(
     info_localization_id: str,
-    access_token: str,
+    access_token: AccessToken,
 ):
     """Deletes the specified App Info Localization."""
     fetch(
@@ -194,7 +195,7 @@ def create_version(
     app_id: str,
     platform: Union[Platform, str],  # pylint: disable=unsubscriptable-object
     version_string: str,
-    access_token: str,
+    access_token: AccessToken,
 ):
     """Creates a new app version."""
     return fetch(
@@ -217,7 +218,7 @@ def create_version(
 def update_version(
     version_id: str,
     version_attributes: VersionAttributes,
-    access_token: str,
+    access_token: AccessToken,
 ):
     """Update an app version."""
     return fetch(
@@ -236,7 +237,7 @@ def update_version(
 
 def get_versions(
     app_id: str,
-    access_token: str,
+    access_token: AccessToken,
     platforms: PlatformList = list(Platform),
     states: VersionStateList = list(VersionState),
 ):
@@ -257,7 +258,7 @@ def get_versions(
 
 def get_versions_editable(
     app_id: str,
-    access_token: str,
+    access_token: AccessToken,
     platforms: PlatformList = list(Platform),
 ):
     return get_versions(
@@ -270,7 +271,7 @@ def get_versions_editable(
 
 def get_version_live(
     app_id: str,
-    access_token: str,
+    access_token: AccessToken,
     platforms: PlatformList = list(Platform),
 ):
     live_state = VersionState.READY_FOR_SALE.name
@@ -289,7 +290,7 @@ def get_version_live(
 
 def get_version_localizations(
     version_id: str,
-    access_token: str,
+    access_token: AccessToken,
 ):
     return fetch(
         method=FetchMethod.GET,
@@ -302,7 +303,7 @@ def create_version_localization(
     version_id: str,
     locale: str,
     localization_attributes: VersionLocalizationAttributes,
-    access_token: str,
+    access_token: AccessToken,
 ):
     """Creates a new app store version localization."""
     return fetch(
@@ -326,7 +327,7 @@ def create_version_localization(
 def update_version_localization(
     localization_id: str,
     localization_attributes: VersionLocalizationAttributes,
-    access_token: str,
+    access_token: AccessToken,
 ):
     """Updates the meta data for the specified App Version Localization.
     Some data fields require the App Version to be in an editable state."""
@@ -346,7 +347,7 @@ def update_version_localization(
 
 def delete_version_localization(
     localization_id: str,
-    access_token: str,
+    access_token: AccessToken,
 ):
     """Deletes the specified App Version Localization."""
     fetch(
@@ -358,7 +359,7 @@ def delete_version_localization(
 
 def get_screenshot_sets(
     localization_id: str,
-    access_token: str,
+    access_token: AccessToken,
 ):
     """Get the screenshot sets from the specified App Version Localization."""
     return fetch(
@@ -373,7 +374,7 @@ def create_screenshot_set(
     display_type: Union[
         ScreenshotDisplayType, str
     ],  # pylint: disable=unsubscriptable-object
-    access_token: str,
+    access_token: AccessToken,
 ):
     """Create a new screenshot set in the specified App Version Localization."""
     return fetch(
@@ -399,7 +400,7 @@ def create_screenshot_set(
 
 def delete_screenshot_set(
     screenshot_set_id: str,
-    access_token: str,
+    access_token: AccessToken,
 ):
     """Delete a screenshot set from the App Version Localization."""
     fetch(
@@ -412,7 +413,7 @@ def delete_screenshot_set(
 def update_screenshot_order(
     screenshot_set_id: str,
     screenshot_ids: Sequence[str],
-    access_token: str,
+    access_token: AccessToken,
 ):
     """Update the order of the screenshots in a screenshot set."""
     fetch(
@@ -429,7 +430,7 @@ def update_screenshot_order(
 
 def get_screenshots(
     screenshot_set_id: str,
-    access_token: str,
+    access_token: AccessToken,
 ):
     """Get the screenshots in a screenshot set."""
     return fetch(
@@ -441,7 +442,7 @@ def get_screenshots(
 
 def get_screenshot(
     screenshot_id: str,
-    access_token: str,
+    access_token: AccessToken,
 ):
     """Get the screenshot info."""
     return fetch(
@@ -455,7 +456,7 @@ def create_screenshot(
     screenshot_set_id: str,
     file_name: str,
     file_size: int,
-    access_token: str,
+    access_token: AccessToken,
 ):
     """Create a screenshot asset reservation in the specified screenshot set.
     Use the upload operations in the response to upload the file parts."""
@@ -484,7 +485,7 @@ def update_screenshot(
     screenshot_id: str,
     uploaded: bool,
     sourceFileChecksum: str,
-    access_token: str,
+    access_token: AccessToken,
 ):
     """Update the screenshot to commit it after a successful upload."""
     return fetch(
@@ -506,7 +507,7 @@ def update_screenshot(
 
 def delete_screenshot(
     screenshot_id: str,
-    access_token: str,
+    access_token: AccessToken,
 ):
     """Delete a screenshot from its screenshot set."""
     fetch(
@@ -518,7 +519,7 @@ def delete_screenshot(
 
 def get_preview_sets(
     localization_id: str,
-    access_token: str,
+    access_token: AccessToken,
 ):
     """Get the preview sets in the specified App Version Localization."""
     return fetch(
@@ -531,7 +532,7 @@ def get_preview_sets(
 def create_preview_set(
     localization_id: str,
     preview_type: Union[PreviewType, str],  # pylint: disable=unsubscriptable-object
-    access_token: str,
+    access_token: AccessToken,
 ):
     """Create a new preview set in the specified App Version Localization."""
     return fetch(
@@ -557,7 +558,7 @@ def create_preview_set(
 
 def delete_preview_set(
     preview_set_id: str,
-    access_token: str,
+    access_token: AccessToken,
 ):
     """Delete a preview set from the App Version Localization."""
     fetch(
@@ -570,7 +571,7 @@ def delete_preview_set(
 def update_preview_order(
     preview_set_id: str,
     preview_ids: Sequence[str],
-    access_token: str,
+    access_token: AccessToken,
 ):
     """Update the order of the previews in a preview set."""
     fetch(
@@ -583,7 +584,7 @@ def update_preview_order(
 
 def get_previews(
     preview_set_id: str,
-    access_token: str,
+    access_token: AccessToken,
 ):
     """Get the previews in a preview set."""
     return fetch(
@@ -595,7 +596,7 @@ def get_previews(
 
 def get_preview(
     preview_id: str,
-    access_token: str,
+    access_token: AccessToken,
 ):
     """Get the preview info."""
     return fetch(
@@ -609,7 +610,7 @@ def create_preview(
     preview_set_id: str,
     file_name: str,
     file_size: int,
-    access_token: str,
+    access_token: AccessToken,
 ):
     """Create a preview asset reservation in the specified preview set.
     Use the upload operations in the response to upload the file parts."""
@@ -640,7 +641,7 @@ def update_preview(
     preview_id: str,
     uploaded: bool,
     sourceFileChecksum: str,
-    access_token: str,
+    access_token: AccessToken,
 ):
     """Update the preview to commit it after a successful upload."""
 
@@ -664,7 +665,7 @@ def update_preview(
 
 def delete_preview(
     preview_id: str,
-    access_token: str,
+    access_token: AccessToken,
 ):
     """Delete a preview from its preview set."""
     fetch(
