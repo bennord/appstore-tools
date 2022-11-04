@@ -2,23 +2,23 @@
 
 Tools for the AppStore Connect API.
 
-This package provides methods to publish, download, and list information about AppStore meta-data (descriptions, keywords, screenshots, previews, etc).  Combined with a deployment workflow (such as github actions), the AppStore meta-data can be tracked and deployed along side the rest of the app's source code and assets.
+This package provides methods to publish, download, and list information about AppStore meta-data (descriptions, keywords, screenshots, previews, etc). Combined with a deployment workflow (such as github actions), the AppStore meta-data can be tracked and deployed along side the rest of the app's source code and assets.
 
 ## Install
 
-```zsh
+```sh
 pip install appstore-tools
 ```
 
 ## Usage
 
-```zsh
+```sh
 appstore-tools [-h] [--version] action [args]
 ```
 
 Examples:
 
-```zsh
+```sh
 # List all apps under the app store account
 appstore-tools apps
 
@@ -82,7 +82,9 @@ To leave an attribute unaffected by the `publish` action, remove the correspondi
 
 Likewise, to leave the screenshots (or previews) unaffected, remove the entire `screenshots` folder. If `screenshots` is present, the `publish` action will add/remove screenshot-display-types and their screenshots to match.
 
-```zsh
+Additionally, filepaths can be explicitly ignored by setting a regex pattern with `--asset-ignore ASSET_IGNORE`.
+
+```sh
 [ASSET_DIR]
 └── com.example.myapp
     └── en-US
