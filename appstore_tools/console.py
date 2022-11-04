@@ -240,6 +240,13 @@ def add_asset_dir_argument(parser: configargparse.ArgumentParser):
     )
 
 
+def add_asset_ignore_argument(parser: configargparse.ArgumentParser):
+    parser.add_argument(
+        "--asset-ignore",
+        help="A regex pattern specifying asset filepaths to ignore.",
+    )
+
+
 def add_subparser(subparsers: argparse._SubParsersAction, name: str, help: str):
     parser = subparsers.add_parser(
         name=name,
@@ -441,6 +448,7 @@ def run():
         title="Publish",
     )
     add_asset_dir_argument(publish_group)
+    add_asset_ignore_argument(publish_group)
     add_platform_argument(publish_group)
     publish_group.add_argument(
         "--version-string",

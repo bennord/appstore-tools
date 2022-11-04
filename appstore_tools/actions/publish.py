@@ -2,6 +2,7 @@ import os
 import hashlib
 import colorama
 import requests
+import re
 from typing import Union, Sequence
 from appstore_tools import appstore
 from appstore_tools.print_util import print_clr, clr, json_term
@@ -157,6 +158,7 @@ def publish_screenshots(
     screenshot_set_dir: str,
     screenshot_set_id: str,
     display_type: str,
+    asset_ignore: str = "",
 ):
     print_media_set_status(display_type, colorama.Fore.CYAN, "checking for changes")
 
@@ -178,11 +180,18 @@ def publish_screenshots(
     # Publish
     new_file_paths = get_new_file_paths(screenshots, screenshot_set_dir)
     for file_path in new_file_paths:
-        publish_screenshot(
-            access_token=access_token,
-            screenshot_path=file_path,
-            screenshot_set_id=screenshot_set_id,
-        )
+        if asset_ignore and re.search(asset_ignore, file_path):
+            print_media_status(
+                file_path,
+                colorama.Fore.CYAN + colorama.Style.DIM,
+                "ignoring",
+            )
+        else:
+            publish_screenshot(
+                access_token=access_token,
+                screenshot_path=file_path,
+                screenshot_set_id=screenshot_set_id,
+            )
 
     # Reorder the screenshots
     print_media_set_status(display_type, colorama.Fore.CYAN, "sorting screenshots")
@@ -202,6 +211,7 @@ def publish_screenshot_sets(
     access_token: AccessToken,
     localization_dir: str,
     localization_id: str,
+    asset_ignore: str = "",
 ):
     """Publish the screenshot sets from assets on disk."""
     screenshots_dir = os.path.join(localization_dir, "screenshots")
@@ -258,6 +268,7 @@ def publish_screenshot_sets(
             screenshot_set_dir=screenshot_set_dir,
             screenshot_set_id=screenshot_set_id,
             display_type=display_type,
+            asset_ignore=asset_ignore,
         )
 
 
@@ -306,6 +317,7 @@ def publish_previews(
     preview_set_dir: str,
     preview_set_id: str,
     display_type: str,
+    asset_ignore: str = "",
 ):
     print_media_set_status(display_type, colorama.Fore.CYAN, "checking for changes")
 
@@ -325,11 +337,18 @@ def publish_previews(
 
     # Publish
     for file_path in new_file_paths:
-        publish_preview(
-            access_token=access_token,
-            preview_path=file_path,
-            preview_set_id=preview_set_id,
-        )
+        if asset_ignore and re.search(asset_ignore, file_path):
+            print_media_status(
+                file_path,
+                colorama.Fore.CYAN + colorama.Style.DIM,
+                "ignoring",
+            )
+        else:
+            publish_preview(
+                access_token=access_token,
+                preview_path=file_path,
+                preview_set_id=preview_set_id,
+            )
 
     # Reorder the previews
     print_media_set_status(display_type, colorama.Fore.CYAN, "sorting previews")
@@ -349,6 +368,7 @@ def publish_preview_sets(
     access_token: AccessToken,
     localization_dir: str,
     localization_id: str,
+    asset_ignore: str = "",
 ):
     """Publish the previews sets from assets on disk."""
     previews_dir = os.path.join(localization_dir, "previews")
@@ -403,6 +423,7 @@ def publish_preview_sets(
             preview_set_dir=preview_set_dir,
             preview_set_id=preview_set_id,
             display_type=preview_type,
+            asset_ignore=asset_ignore,
         )
 
 
@@ -410,6 +431,7 @@ def publish_version_localizations(
     access_token: AccessToken,
     app_dir: str,
     version_id: str,
+    asset_ignore: str = "",
     allow_create_locale: bool = True,
     allow_delete_locale: bool = True,
 ):
@@ -469,9 +491,16 @@ def publish_version_localizations(
         asset_loc_data: appstore.VersionLocalizationAttributes = {}
         for key in appstore.VersionLocalizationAttributes.__annotations__.keys():
             path = os.path.join(loc_dir, key + ".txt")
-            content = read_txt_file(path)
-            if content is not None:
-                asset_loc_data[key] = content  # type: ignore
+            if asset_ignore and re.search(asset_ignore, path):
+                print_locale_status(
+                    locale,
+                    colorama.Fore.CYAN,
+                    f"ignoring {colorama.Fore.CYAN}{colorama.Style.DIM}{path}",
+                )
+            else:
+                content = read_txt_file(path)
+                if content is not None:
+                    asset_loc_data[key] = content  # type: ignore
 
         # Only need to update if there are differences
         loc_diff_keys = [
@@ -500,6 +529,7 @@ def publish_version_localizations(
             access_token=access_token,
             localization_dir=loc_dir,
             localization_id=loc_id,
+            asset_ignore=asset_ignore,
         )
 
         # Previews
@@ -507,6 +537,7 @@ def publish_version_localizations(
             access_token=access_token,
             localization_dir=loc_dir,
             localization_id=loc_id,
+            asset_ignore=asset_ignore,
         )
 
 
@@ -518,6 +549,7 @@ def publish_version(
     platform: Union[appstore.Platform, str],  # pylint: disable=unsubscriptable-object
     version_string: str,
     update_version_string: bool,
+    asset_ignore: str = "",
     allow_create_version: bool = True,
     allow_create_locale: bool = True,
     allow_delete_locale: bool = True,
@@ -579,6 +611,7 @@ def publish_version(
             access_token=access_token,
             app_dir=app_dir,
             version_id=version_id,
+            asset_ignore=asset_ignore,
             allow_create_locale=allow_create_locale,
             allow_delete_locale=allow_delete_locale,
         )
@@ -590,6 +623,7 @@ def publish_info(
     app_id: str,
     bundle_id: str,
     platform: Union[appstore.Platform, str],  # pylint: disable=unsubscriptable-object
+    asset_ignore: str = "",
 ):
     # Get Infos
     infos = appstore.get_infos(
@@ -649,9 +683,16 @@ def publish_info(
             asset_loc_data: appstore.InfoLocalizationAttributes = {}
             for key in appstore.InfoLocalizationAttributes.__annotations__.keys():
                 path = os.path.join(loc_dir, key + ".txt")
-                content = read_txt_file(path)
-                if content is not None:
-                    asset_loc_data[key] = content  # type: ignore
+                if asset_ignore and re.search(asset_ignore, path):
+                    print_locale_status(
+                        locale,
+                        colorama.Fore.CYAN,
+                        f"ignoring {colorama.Fore.CYAN}{colorama.Style.DIM}{path}",
+                    )
+                else:
+                    content = read_txt_file(path)
+                    if content is not None:
+                        asset_loc_data[key] = content  # type: ignore
 
             # Only need to update if there are differences
             loc_diff_keys = [
@@ -684,11 +725,12 @@ def publish(
     platform: Union[appstore.Platform, str],  # pylint: disable=unsubscriptable-object
     version_string: str,
     update_version_string: bool,
+    asset_ignore: str = "",
     allow_create_version: bool = True,
     allow_create_locale: bool = True,
     allow_delete_locale: bool = True,
 ):
-    """Publish all the app meta data app store, using any editable app versions found.
+    """Publish all the app meta data to the app store, using any editable app versions found.
     If none are found, a new version can be created for the specified target platform."""
     print_clr("Publishing assets from directory: ", colorama.Fore.CYAN + asset_dir)
 
@@ -707,6 +749,7 @@ def publish(
         platform=platform,
         version_string=version_string,
         update_version_string=update_version_string,
+        asset_ignore=asset_ignore,
         allow_create_version=allow_create_version,
         allow_create_locale=allow_create_locale,
         allow_delete_locale=allow_delete_locale,
@@ -717,5 +760,6 @@ def publish(
         app_id=app_id,
         bundle_id=bundle_id,
         platform=platform,
+        asset_ignore=asset_ignore,
     )
     print_clr(colorama.Fore.GREEN + "Publish complete")
