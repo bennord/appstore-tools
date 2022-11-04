@@ -10,3 +10,6 @@
 # tool caches
 .mypy_cache/
 __pycache__/
+
+# Mac OS folder file
+.DS_Store
