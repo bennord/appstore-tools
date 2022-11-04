@@ -69,7 +69,7 @@ access_token = appstore.create_access_token(
 # Call the AppStore connect API
 apps = appstore.get_apps(access_token=access_token)
 
-# Or call one of the AppStore-Tools Actions
+# Or call one of the AppStore-Tool Actions
 actions.list_apps(access_token=access_token)
 
 ```
