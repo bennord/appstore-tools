@@ -611,6 +611,8 @@ def create_preview(
     file_name: str,
     file_size: int,
     access_token: AccessToken,
+    mime_type: str = "",
+    preview_frame_time_code: str = "",
 ):
     """Create a preview asset reservation in the specified preview set.
     Use the upload operations in the response to upload the file parts."""
@@ -622,7 +624,16 @@ def create_preview(
         access_token=access_token,
         data={
             "data": {
-                "attributes": {"fileName": file_name, "fileSize": file_size},
+                "attributes": {
+                    "fileName": file_name,
+                    "fileSize": file_size,
+                    **({"mimeType": mime_type} if mime_type else {}),
+                    **(
+                        {"previewFrameTimeCode": preview_frame_time_code}
+                        if preview_frame_time_code
+                        else {}
+                    ),
+                },
                 "relationships": {
                     "appPreviewSet": {
                         "data": {
@@ -639,9 +650,10 @@ def create_preview(
 
 def update_preview(
     preview_id: str,
-    uploaded: bool,
-    sourceFileChecksum: str,
     access_token: AccessToken,
+    uploaded: bool = None,
+    source_file_checksum: str = "",
+    preview_frame_time_code: str = "",
 ):
     """Update the preview to commit it after a successful upload."""
 
@@ -654,8 +666,17 @@ def update_preview(
             "data": {
                 "id": preview_id,
                 "attributes": {
-                    "uploaded": uploaded,
-                    "sourceFileChecksum": sourceFileChecksum,
+                    **({"uploaded": uploaded} if uploaded is not None else {}),
+                    **(
+                        {"sourceFileChecksum": source_file_checksum}
+                        if source_file_checksum
+                        else {}
+                    ),
+                    **(
+                        {"previewFrameTimeCode": preview_frame_time_code}
+                        if preview_frame_time_code
+                        else {}
+                    ),
                 },
                 "type": "appPreviews",
             }
