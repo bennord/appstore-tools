@@ -312,7 +312,7 @@ def list_previews(
                     json_term(
                         {
                             "previewType": preview_type,
-                            "screenshots": previews,
+                            "previews": previews,
                         }
                     )
                 )
