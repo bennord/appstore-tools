@@ -6,6 +6,10 @@ from enum import Enum, auto
 from appstore_tools.print_util import print_clr, clr, json_term
 
 
+def get_attributes_file_path(media_file_path: str) -> str:
+    return media_file_path + ".json"
+
+
 def fetch_screenshot(screenshot: dict):
     """Fetches screenshot data. Retuns None if screenshot has no asset."""
     attr = screenshot["attributes"]
