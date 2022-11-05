@@ -93,6 +93,9 @@ Additionally, filepaths can be explicitly ignored by setting a regex pattern wit
         ├── marketingUrl.txt
         ├── name.txt
         ├── previews
+        │   └── IPHONE_65
+        │       ├── video.mp4
+        │       └── video.mp4.json
         ├── privacyPolicyText.txt
         ├── privacyPolicyUrl.txt
         ├── promotionalText.txt
@@ -100,22 +103,30 @@ Additionally, filepaths can be explicitly ignored by setting a regex pattern wit
         │   ├── APP_IPAD_PRO_129
         │   │   ├── 10_Image.png
         │   │   ├── 20_AnotherImage.png
-        │   │   ├── 30_MoreImages.png
+        │   │   └── 30_MoreImages.png
         │   ├── APP_IPAD_PRO_3GEN_129
         │   │   ├── a_is_the_first_letter.png
         │   │   ├── b_is_the_second_letter.png
-        │   │   ├── c_is_the_third_letter.png
+        │   │   └── c_is_the_third_letter.png
         │   ├── APP_IPHONE_55
         │   │   ├── image01.png
         │   │   ├── image02.png
-        │   │   ├── image03.png
+        │   │   └── image03.png
         │   └── APP_IPHONE_65
-        │   │   ├── image01.png
-        │   │   ├── image02.png
-        │   │   ├── image03.png
+        │       ├── image01.png
+        │       ├── image02.png
+        │       └── image03.png
         ├── subtitle.txt
         ├── supportUrl.txt
         └── whatsNew.txt
+```
+
+Additional attributes for media files can be set by placing a `json` file with a matching base file name along side the media file. For example, the contents of `video.mp4.json` (along side `video.mp4`) could look like this:
+
+```json
+{
+  "previewFrameTimeCode": "00:00:14:01"
+}
 ```
 
 ## Source
