@@ -617,7 +617,6 @@ def create_preview(
     """Create a preview asset reservation in the specified preview set.
     Use the upload operations in the response to upload the file parts."""
 
-    # TODO: add support for previewFrameTimeCode
     return fetch(
         method=FetchMethod.POST,
         path=f"/appPreviews",
@@ -657,7 +656,6 @@ def update_preview(
 ):
     """Update the preview to commit it after a successful upload."""
 
-    # TODO: add support for previewFrameTimeCode
     return fetch(
         method=FetchMethod.PATCH,
         path=f"/appPreviews/{preview_id}",
