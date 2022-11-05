@@ -6,7 +6,12 @@ import colorama
 from typing import Any
 
 
-def json_term(obj: Any):
+def json_file(obj: Any) -> str:
+    """Stringifies the object with json formatting for file output."""
+    return json.dumps(obj, indent=2)
+
+
+def json_term(obj: Any) -> str:
     """Stringifies the object with json syntax highlighting for the terminal."""
     obj_formatted = json.dumps(obj, indent=2)
     return pygments.highlight(

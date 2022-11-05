@@ -105,6 +105,7 @@ def list_previews(args):
         platforms=platforms,
         states=states,
         version_limit=args.version_limit,
+        verbosity=args.verbosity,
     )
 
 
@@ -142,6 +143,7 @@ def publish(args):
         platform=args.platform,
         version_string=args.version_string or args.created_version_string,
         update_version_string=args.version_string is not None,
+        media_completion_timeout_secs=args.media_completion_timeout,
         asset_ignore=args.asset_ignore,
         allow_create_version=not args.no_create_version,
         allow_create_locale=not args.no_create_locale,

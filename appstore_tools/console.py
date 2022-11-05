@@ -451,6 +451,11 @@ def run():
     add_asset_ignore_argument(publish_group)
     add_platform_argument(publish_group)
     publish_group.add_argument(
+        "--media-completion-timeout",
+        default=300,
+        help="The number of seconds to wait for media completion when attempting to update attributes on newly uploaded assets.",
+    )
+    publish_group.add_argument(
         "--version-string",
         help="Update the version string in the app store version.",
     )

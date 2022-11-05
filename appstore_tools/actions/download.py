@@ -1,10 +1,11 @@
 import colorama
 import os
 from appstore_tools import appstore
-from appstore_tools.print_util import print_clr, clr
+from appstore_tools.print_util import print_clr, clr, json_file
 from appstore_tools.tqdm_util import tqdm_with_redirect
 from appstore_tools.appstore.auth import AccessToken
 from .util import (
+    get_attributes_file_path,
     write_txt_file,
     write_binary_file,
     fetch_screenshot,
@@ -167,6 +168,16 @@ def download_version(
                         write_binary_file(
                             path=file_path,
                             content=response.content,
+                        )
+                        write_txt_file(
+                            path=get_attributes_file_path(file_path),
+                            content=json_file(
+                                {
+                                    "previewFrameTimeCode": preview["attributes"][
+                                        "previewFrameTimeCode"
+                                    ]
+                                }
+                            ),
                         )
                     else:
                         print_media_status(
