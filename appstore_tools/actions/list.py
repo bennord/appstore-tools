@@ -6,6 +6,7 @@ from appstore_tools import appstore
 from appstore_tools.print_util import print_clr, clr, json_term
 from appstore_tools.appstore.auth import AccessToken
 
+
 class Verbosity(Enum):
     SHORT = auto()
     LONG = auto()
@@ -196,7 +197,7 @@ def list_screenshots(
                                 ]["state"],
                             }
                             if x["attributes"]["assetDeliveryState"]["state"]
-                            == appstore.MediaAssetState.COMPLETE
+                            == appstore.MediaAssetState.COMPLETE.name
                             else {
                                 "id": x["id"],
                                 "fileSize": x["attributes"]["fileSize"],
@@ -227,6 +228,7 @@ def list_previews(
     platforms: appstore.PlatformList,
     states: appstore.VersionStateList,
     version_limit: Optional[int],  # pylint: disable=unsubscriptable-object
+    verbosity: Verbosity = Verbosity.SHORT,
 ):
     """List previews for each preview set of each app version."""
     logging.info(clr(colorama.Fore.GREEN + "app_id: ", str(app_id)))
@@ -258,8 +260,59 @@ def list_previews(
             for preview_set in preview_sets:
                 preview_set_id = preview_set["id"]
                 preview_type = preview_set["attributes"]["previewType"]
-                preview_set = appstore.get_previews(
+                previews = appstore.get_previews(
                     preview_set_id=preview_set_id, access_token=access_token
                 )
-                print_clr(f"{colorama.Fore.GREEN}previewType: ", preview_type)
-                print(json_term(preview_set))
+                if verbosity == Verbosity.SHORT:
+                    print_clr(colorama.Fore.CYAN + preview_type)
+                    for x in previews:
+                        print_clr(
+                            f'  {colorama.Style.DIM}{x["attributes"]["assetDeliveryState"]["state"]:15}',
+                            f'  {colorama.Fore.CYAN}{colorama.Style.DIM}{x["attributes"]["previewFrameTimeCode"]}',
+                            f'  {x["attributes"]["fileName"]}',
+                        )
+                    continue
+                if verbosity == Verbosity.LONG:
+                    previews = [
+                        (
+                            {
+                                "id": x["id"],
+                                "fileSize": x["attributes"]["fileSize"],
+                                "fileName": x["attributes"]["fileName"],
+                                "sourceFileChecksum": x["attributes"][
+                                    "sourceFileChecksum"
+                                ],
+                                "videoUrl": x["attributes"]["videoUrl"],
+                                "previewImageTemplateUrl": x["attributes"][
+                                    "previewImage"
+                                ]["templateUrl"],
+                                "width": x["attributes"]["previewImage"]["width"],
+                                "height": x["attributes"]["previewImage"]["height"],
+                                "assetDeliveryState": x["attributes"][
+                                    "assetDeliveryState"
+                                ]["state"],
+                            }
+                            if x["attributes"]["assetDeliveryState"]["state"]
+                            == appstore.MediaAssetState.COMPLETE.name
+                            else {
+                                "id": x["id"],
+                                "fileSize": x["attributes"]["fileSize"],
+                                "fileName": x["attributes"]["fileName"],
+                                "sourceFileChecksum": x["attributes"][
+                                    "sourceFileChecksum"
+                                ],
+                                "assetDeliveryState": x["attributes"][
+                                    "assetDeliveryState"
+                                ]["state"],
+                            }
+                        )
+                        for x in previews
+                    ]
+                print(
+                    json_term(
+                        {
+                            "previewType": preview_type,
+                            "screenshots": previews,
+                        }
+                    )
+                )

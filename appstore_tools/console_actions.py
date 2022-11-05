@@ -105,6 +105,7 @@ def list_previews(args):
         platforms=platforms,
         states=states,
         version_limit=args.version_limit,
+        verbosity=args.verbosity,
     )
 
 
