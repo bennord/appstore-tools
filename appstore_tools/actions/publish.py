@@ -3,12 +3,15 @@ import hashlib
 import colorama
 import requests
 import re
+import json
+import time
 from typing import Union, Sequence
 from appstore_tools import appstore
 from appstore_tools.print_util import print_clr, clr, json_term
 from appstore_tools.appstore.auth import AccessToken
 
 from .util import (
+    get_attributes_file_path,
     read_txt_file,
     print_locale_status,
     print_media_set_status,
@@ -18,7 +21,7 @@ from .util import (
 
 def media_checksum_ok(media, media_asset_dir: str) -> bool:
     """Checks if the appstore checksum matches the asset checksum."""
-    file_name = media["attributes"]["fileName"]
+    file_name = get_media_file_name(media)
     file_path = os.path.join(media_asset_dir, file_name)
     appstore_checksum = media["attributes"]["sourceFileChecksum"]
 
@@ -93,13 +96,22 @@ def upload_media(media, media_asset_path: str) -> str:
     return file_hash.hexdigest()
 
 
+def get_media_file_name(media: dict):
+    """Gets the filename for screenshot/preview media with `id` prefixes stripped off."""
+    return media["attributes"]["fileName"].replace(media["id"] + "_", "")
+
+
 def get_media_file_names(media: Sequence[dict]):
-    return [x["attributes"]["fileName"] for x in media]
+    return [get_media_file_name(x) for x in media]
 
 
-def get_asset_file_names(asset_dir: str):
+def get_asset_file_names(asset_dir: str, attributes_file_ext: str = ".json"):
+    """Gets the asset files in a directory, ignoring attribute files."""
     return [
-        x for x in os.listdir(asset_dir) if os.path.isfile(os.path.join(asset_dir, x))
+        x
+        for x in os.listdir(asset_dir)
+        if os.path.isfile(os.path.join(asset_dir, x))
+        and not (attributes_file_ext and x.endswith(attributes_file_ext))
     ]
 
 
@@ -275,6 +287,7 @@ def publish_screenshot_sets(
 def publish_preview(
     access_token: AccessToken,
     preview_path: str,
+    attributes_path: str,
     preview_set_id: str,
 ):
     if not os.path.isfile(preview_path):
@@ -282,6 +295,12 @@ def publish_preview(
 
     _, file_name = os.path.split(preview_path)
     file_stat = os.stat(preview_path)
+
+    # Attributes file
+    attributes = {"previewFrameTimeCode": ""}
+    if os.path.isfile(attributes_path):
+        attributes_json = read_txt_file(attributes_path)
+        attributes = {**attributes, **json.loads(attributes_json)}
 
     # Create
     print_media_status(
@@ -304,12 +323,87 @@ def publish_preview(
         colorama.Fore.CYAN,
         "commiting upload",
     )
-    preview = appstore.update_preview(
+    appstore.update_preview(
         preview_id=preview["id"],
-        uploaded=True,
-        sourceFileChecksum=checksum,
         access_token=access_token,
+        uploaded=True,
+        source_file_checksum=checksum,
     )
+
+
+def publish_preview_attributes(
+    access_token: AccessToken,
+    preview_path: str,
+    attributes_path: str,
+    preview: dict,
+    timeout_secs: float,
+):
+    _, file_name = os.path.split(preview_path)
+    _, attributes_file_name = os.path.split(attributes_path)
+
+    # Attributes file
+    attributes = {}
+    if not os.path.isfile(attributes_path):
+        # Nothing to update
+        print_media_status(
+            attributes_file_name,
+            colorama.Fore.CYAN + colorama.Style.DIM,
+            "attributes file not provided",
+        )
+        return
+
+    attributes_json = read_txt_file(attributes_path)
+    attributes = json.loads(attributes_json)
+
+    if (
+        "previewFrameTimeCode" not in attributes
+        or not attributes["previewFrameTimeCode"]
+        or attributes["previewFrameTimeCode"]
+        == preview["attributes"]["previewFrameTimeCode"]
+    ):
+        # Nothing to update
+        print_media_status(
+            attributes_file_name,
+            colorama.Fore.CYAN + colorama.Style.DIM,
+            "attributes matched",
+        )
+        return
+
+    # Wait for upload completion
+    backoff_secs = 2.0
+    completion_secs = 0.0
+    while (
+        completion_secs < timeout_secs
+        and preview["attributes"]["assetDeliveryState"]["state"]
+        == appstore.MediaAssetState.UPLOAD_COMPLETE.name
+    ):
+        print_media_status(
+            file_name,
+            colorama.Fore.CYAN,
+            f"{completion_secs:.0f}s - waiting for upload completion...",
+        )
+        time.sleep(backoff_secs)
+        completion_secs += backoff_secs
+        backoff_secs *= 1.5
+        preview = appstore.get_preview(
+            preview_id=preview["id"], access_token=access_token
+        )
+
+    if (
+        preview["attributes"]["assetDeliveryState"]["state"]
+        == appstore.MediaAssetState.COMPLETE.name
+    ):
+        # Update attributes
+        print_media_status(
+            attributes_file_name,
+            colorama.Fore.CYAN,
+            "setting attributes",
+        )
+        preview = appstore.update_preview(
+            preview_id=preview["id"],
+            access_token=access_token,
+            preview_frame_time_code=attributes["previewFrameTimeCode"],
+        )
 
 
 def publish_previews(
@@ -317,6 +411,7 @@ def publish_previews(
     preview_set_dir: str,
     preview_set_id: str,
     display_type: str,
+    completion_timeout_secs: float,
     asset_ignore: str = "",
 ):
     print_media_set_status(display_type, colorama.Fore.CYAN, "checking for changes")
@@ -329,13 +424,11 @@ def publish_previews(
         if not media_checksum_ok(media=preview, media_asset_dir=preview_set_dir):
             appstore.delete_preview(preview_id=preview["id"], access_token=access_token)
 
-    # Create new previews
+    # Publish new previews
     previews = appstore.get_previews(
         preview_set_id=preview_set_id, access_token=access_token
     )
     new_file_paths = get_new_file_paths(previews, preview_set_dir)
-
-    # Publish
     for file_path in new_file_paths:
         if asset_ignore and re.search(asset_ignore, file_path):
             print_media_status(
@@ -344,10 +437,34 @@ def publish_previews(
                 "ignoring",
             )
         else:
+            attributes_path = get_attributes_file_path(file_path)
             publish_preview(
                 access_token=access_token,
                 preview_path=file_path,
+                attributes_path=attributes_path,
                 preview_set_id=preview_set_id,
+            )
+
+    # Update preview attributes
+    previews = appstore.get_previews(
+        preview_set_id=preview_set_id, access_token=access_token
+    )
+    for preview in previews:
+        file_path = os.path.join(preview_set_dir, get_media_file_name(preview))
+        attributes_path = get_attributes_file_path(file_path)
+        if asset_ignore and re.search(asset_ignore, attributes_path):
+            print_media_status(
+                attributes_path,
+                colorama.Fore.CYAN + colorama.Style.DIM,
+                "ignoring",
+            )
+        else:
+            publish_preview_attributes(
+                access_token=access_token,
+                preview_path=file_path,
+                attributes_path=attributes_path,
+                preview=preview,
+                timeout_secs=completion_timeout_secs,
             )
 
     # Reorder the previews
@@ -368,6 +485,7 @@ def publish_preview_sets(
     access_token: AccessToken,
     localization_dir: str,
     localization_id: str,
+    completion_timeout_secs: float,
     asset_ignore: str = "",
 ):
     """Publish the previews sets from assets on disk."""
@@ -423,6 +541,7 @@ def publish_preview_sets(
             preview_set_dir=preview_set_dir,
             preview_set_id=preview_set_id,
             display_type=preview_type,
+            completion_timeout_secs=completion_timeout_secs,
             asset_ignore=asset_ignore,
         )
 
@@ -431,6 +550,7 @@ def publish_version_localizations(
     access_token: AccessToken,
     app_dir: str,
     version_id: str,
+    media_completion_timeout_secs: float,
     asset_ignore: str = "",
     allow_create_locale: bool = True,
     allow_delete_locale: bool = True,
@@ -537,6 +657,7 @@ def publish_version_localizations(
             access_token=access_token,
             localization_dir=loc_dir,
             localization_id=loc_id,
+            completion_timeout_secs=media_completion_timeout_secs,
             asset_ignore=asset_ignore,
         )
 
@@ -549,6 +670,7 @@ def publish_version(
     platform: Union[appstore.Platform, str],  # pylint: disable=unsubscriptable-object
     version_string: str,
     update_version_string: bool,
+    media_completion_timeout_secs: float,
     asset_ignore: str = "",
     allow_create_version: bool = True,
     allow_create_locale: bool = True,
@@ -611,6 +733,7 @@ def publish_version(
             access_token=access_token,
             app_dir=app_dir,
             version_id=version_id,
+            media_completion_timeout_secs=media_completion_timeout_secs,
             asset_ignore=asset_ignore,
             allow_create_locale=allow_create_locale,
             allow_delete_locale=allow_delete_locale,
@@ -725,6 +848,7 @@ def publish(
     platform: Union[appstore.Platform, str],  # pylint: disable=unsubscriptable-object
     version_string: str,
     update_version_string: bool,
+    media_completion_timeout_secs: float = 300,
     asset_ignore: str = "",
     allow_create_version: bool = True,
     allow_create_locale: bool = True,
@@ -749,6 +873,7 @@ def publish(
         platform=platform,
         version_string=version_string,
         update_version_string=update_version_string,
+        media_completion_timeout_secs=media_completion_timeout_secs,
         asset_ignore=asset_ignore,
         allow_create_version=allow_create_version,
         allow_create_locale=allow_create_locale,
